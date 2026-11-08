@@ -67,6 +67,11 @@ The script builds a separate acceptance stack on port 8181 and runs backend, fro
 | [Architecture](docs/architecture.md) | Components, security boundaries and technical decisions |
 | [Database](docs/database.md) | PostgreSQL entities, constraints, migrations and stock rules |
 | [ER diagram](docs/diagrams/domain-erd.md) | Schema relationships and diagram export instructions |
+| [Task register](docs/task-register.md) | Current tasks, owners, deadlines, status and completion evidence |
+| [Weekly progress](docs/progress/current-status.md) | Current team report and preserved weekly history |
+| [Requirements](docs/requirements.md) | Project aim, objectives and acceptance criteria |
+| [AI usage](docs/ai-usage.md) | Assistance disclosure and student verification responsibilities |
+| [Semester plan](semester_mvp_project_plan.md) | Governing weekly course criteria |
 
 ## Contributing
 
