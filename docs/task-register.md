@@ -39,6 +39,7 @@ All rows below completed **2026-11-08** by **Ehsan-directed, Codex-assisted work
 | QA-01 | Reproducible isolated acceptance stack and local demo runbook | Verification roadmap | Done | `d710d15`, `a0c9548`; [acceptance report](verification/acceptance-report.md): 52 tests plus 21 backend subtests |
 | ADMIN-01 | Protected admin route, user/reference CRUD, confirmation and history protection | Week 11 | Done | `a0c9548`; admin API/browser tests; [demo steps](verification/demo-runbook.md) |
 | UI-02 | Responsive workspace redesign, real overview and reviewed screenshots | Frontend improvement | Done | `a0c9548`; [design review](verification/week11-design-review.md) |
+| REVIEW-01 | Review all milestone work for main integration and rerun full acceptance | Repository integration | Done | Reviewed baseline `63c4572`; [integration review](verification/main-integration-review.md); Codex review under Ehsan's direction, not independent teammate review |
 
 ## Next member tasks — proposed, awaiting team agreement
 
