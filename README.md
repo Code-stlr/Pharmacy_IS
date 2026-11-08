@@ -4,7 +4,7 @@ Educational pharmacy web application. Start with [the approved plan](docs/projec
 
 ## Current state
 
-Foundation plus domain schema: React/TypeScript, Material UI, English/Kazakh/Russian application shell, Django REST Framework, PostgreSQL, nine pharmacy models, migrations, fictional demo seeds, and a database readiness endpoint. Authentication and business workflows are pending. The original prototype remains unchanged at `DB/SQLite.db`. See [database documentation](docs/database.md) for schema rules and [ERD](docs/diagrams/domain-erd.md).
+Phases 1–6 provide a working React/Django/PostgreSQL MVP: session authentication, role permissions, patient and inventory forms, prescriptions, atomic dispensing, history, multi-entity search and English/Kazakh/Russian interfaces. The original prototype remains unchanged at `DB/SQLite.db`. See [application guide](docs/application.md), [database documentation](docs/database.md), and [ERD](docs/diagrams/domain-erd.md).
 
 ## Run locally with Docker
 

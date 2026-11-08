@@ -31,11 +31,11 @@ See [ERD](diagrams/domain-erd.md).
 - Quantities are whole dispensing units (tablets, bottles, etc.), not an implicit mixture of packs and individual doses. Prices are per unit in KZT with two decimal places.
 - There is one line per medication per prescription; directions describe the regimen. Refills and repeat prescriptions are outside the current model.
 
-## Upcoming transactional dispensing rules
+## Transactional dispensing rules
 
-The future dispensing service must execute validation and writes in one database transaction, lock the batch and prescription line, reject inactive/expired/future-issued prescriptions and expired/inactive medication, cap cumulative dispensing at the prescribed quantity, decrement stock, and preserve the transaction price. Partial dispensing is supported by multiple transactions referencing the same line. It must update completed prescription status when all lines are fulfilled.
+`backend/pharmacy/services.py` executes validation and writes in one database transaction, locks the prescription, line and batch, rejects inactive/expired/future-issued prescriptions and expired/inactive medication, caps cumulative dispensing at the prescribed quantity, decrements stock, and preserves the transaction price. Partial dispensing is supported by multiple transactions referencing the same line. Prescription status becomes completed when all lines are fulfilled. A batch expiring today is considered unavailable; batches not yet received are also rejected.
 
-These cross-record and concurrency rules are not enforced by this schema alone. No dispensing API is exposed yet. Direct ORM writes must not be treated as a safe dispensing workflow. Allergy notes are documentation, not an automated clinical decision engine.
+These cross-record and concurrency rules are enforced by the dispensing service, not by the schema alone. `POST /api/dispensings/` uses that service and requires Admin or Pharmacist membership. Stock cannot be edited through the API after a batch is created, and transactions cannot be changed or deleted. Direct ORM writes must not be treated as a safe dispensing workflow. Allergy notes remain documentation, not an automated clinical decision engine.
 
 ## Reproduce
 
@@ -48,6 +48,6 @@ docker compose exec backend python manage.py seed_demo
 docker compose exec backend python -m pytest -p no:cacheprovider
 ```
 
-`seed_demo` is atomic and repeatable: it creates missing fictional records without resetting existing stock, changing prescriptions, or creating login credentials. Dates are relative to the first run and are not extended on rerun. It does not insert dispensing events because those must go through the later transactional workflow.
+`seed_demo` is atomic and repeatable: it creates missing fictional records without resetting existing stock, changing prescriptions, or creating login credentials. Dates are relative to the first run and are not extended on rerun. It does not insert dispensing events; use the transactional workflow.
 
 Authentication will use Django's existing User model and Groups (Admin, Pharmacist, Patient), with the optional patient profile relationship. This avoids replacing the auth schema already migrated in Phase 0.

@@ -13,7 +13,9 @@ Read `project-plan.md` for approved scope, architecture, course criteria, and ow
 
 ## Next implementation phase
 
-Implement authentication and role permissions using Django's existing User and Groups. Patient has an optional one-to-one user link. Preserve the existing auth schema; no custom user replacement or database reset is needed. Domain decisions and future dispensing invariants are documented in `database.md`. After security, implement the atomic dispensing service and application screens.
+Phases 3–6 now provide session authentication, patient registration, Admin/Pharmacist/Patient authorization, scoped patient data, account profile editing, transactional Rx/OTC dispensing, resource forms, history, multi-entity search, and complete UI dictionaries for English/Kazakh/Russian. See `application.md` for endpoints, operation and limitations. Django's existing User and Groups remain authoritative for roles.
+
+Next is phase 7: course evidence and presentation artifacts, followed by the broader phase 8 verification milestone and phase 9 VPS deployment. The dedicated Week 11 admin dashboard is still pending. Existing tests provide implementation evidence but do not replace a full acceptance review.
 
 ## Constraints
 
