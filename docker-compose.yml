@@ -29,4 +29,3 @@ services:
       - backend
 volumes:
   postgres_data:
-
