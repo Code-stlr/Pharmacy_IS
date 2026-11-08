@@ -1,4 +1,4 @@
-# Application guide — core workflows and Week 11 administration
+# Application guide
 
 ## Run and sign in
 
@@ -12,7 +12,7 @@ docker compose exec -e DEMO_PASSWORD="your-demo-password" backend python manage.
 
 The command creates `admin_demo`, `pharmacist_demo`, and `patient_demo` only if missing. It never resets existing passwords or changes existing roles. Run the seed command first so the new patient account can link to the fictional `DEMO-P001` patient. Public registration creates Patient accounts only. Roles can be provisioned by trusted operators through Django Groups; there is no public role assignment endpoint.
 
-The current local verification database has these three accounts with the password `Demo-Pharmacy-2026!`. These are local, fictional demonstration credentials and must not be reused for hosting. Open http://localhost:8080.
+Use the password you supplied when creating these local accounts. Existing account passwords are never reset by provisioning. Open http://localhost:8080.
 
 ## Role behavior
 
@@ -22,13 +22,13 @@ The current local verification database has these three accounts with the passwo
 
 The frontend hides staff actions for patients. The API independently applies role checks and ownership filters. Admins also have `/admin` for user and reference-record management. There is no deletion API for clinical history and no stock edit API. Batch corrections, returns and cancellations remain later work.
 
-## Week 11 admin panel
+## Admin panel
 
 Sign in as `admin_demo` and select Admin panel. Users, Medications, Categories, Suppliers, Doctors and Patients support search, creation, editing and confirmed deletion of eligible records. Passwords are required when creating users and optional when editing; stored passwords use Django hashing. Role assignment is restricted to administrators.
 
 The separate `/api/admin/{users,medications,categories,suppliers,doctors,patients}/` endpoints support GET, POST, PATCH and DELETE. They independently reject non-admin access. Linked clinical records cannot be deleted. Superusers and the current administrator are protected from destructive account changes; serialized account administration preserves an active administrator. Deactivate eligible linked accounts instead of erasing history. No admin endpoint deletes prescriptions, batches or dispensing transactions.
 
-The redesigned workspace has an overview with real scoped counts, inventory availability and recent dispensing, sidebar navigation, mobile navigation, searchable ledgers and dialog forms. See `frontend-design-spec.md` and `verification/week11-design-review.md` for design decisions and reviewed screenshots.
+The workspace has an overview with real scoped counts, inventory availability and recent dispensing, sidebar navigation, mobile navigation, searchable ledgers and dialog forms.
 
 ## Demonstrate the main workflow
 
@@ -74,4 +74,28 @@ docker compose exec backend python manage.py spectacular --validate --fail-on-wa
 
 From `frontend/`, run `npm test`, `npm run build`, and `npx playwright install chromium`. Set `DEMO_PASSWORD` to the local demo password and run `npx playwright test` against the running app. Browser tests create fictional records and consume a few demo stock units; seeds intentionally do not reset them.
 
-The application currently loads complete small resource lists for dropdowns and search screens. Pagination, large-data optimization, clinical allergy/interaction checking, idempotent retries, richer navigation and production operations are outside this milestone. Submit dispensing once and verify history before retrying an uncertain network result.
+The application currently loads complete small resource lists for dropdowns and search screens. Pagination, large-data optimization, clinical allergy/interaction checking, idempotent retries and production operations remain future work. Submit dispensing once and verify history before retrying an uncertain network result.
+
+## Development without container rebuilds
+
+Use Python 3.14, Node 24 and a running PostgreSQL instance. Set the variables from `.env.example` in your shell, including `POSTGRES_HOST` for your database. Django does not automatically load `.env` outside Compose.
+
+From the repository root:
+
+```powershell
+python -m venv .venv
+./.venv/Scripts/python -m pip install -r backend/requirements.txt
+cd backend
+../.venv/Scripts/python manage.py migrate
+../.venv/Scripts/python manage.py runserver
+```
+
+In another terminal:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Vite proxies `/api` to Django. Tests and migrations require PostgreSQL; the health unit tests alone do not prove database availability.
