@@ -2,6 +2,8 @@
 
 Prepared 2026-11-08. This is a forward plan, not a claim that future tasks are complete. Current stage: Working System. Health: At Risk until topic approval, contribution review and team rehearsal are confirmed.
 
+Current assignments/status are maintained in the [central task register](../task-register.md). This file preserves the original plan and dated results. Next-member task IDs are TEAM-01 (Ehsan), DATA-02 (Garifolla), UI-03 (Damir), SEC-01 (Yerassyl) and QA-02 (Yerdos). The completed admin/redesign milestones are ADMIN-01 and UI-02. Update the register and this weekly record together; the older proposal below remains planning history.
+
 ## Starting point
 
 Phases 1–6 implementation and local automated/browser evidence exist. Phase 7 course artifacts and Phase 8 technical acceptance evidence are prepared. At the time this forward plan was drafted, the dedicated admin panel and VPS deployment were pending. The dated completion entry below records the subsequent admin work.

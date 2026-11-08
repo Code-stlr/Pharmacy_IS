@@ -2,6 +2,8 @@
 
 Educational pharmacy web application. Start with [the approved plan](docs/project-plan.md) and [current project context](docs/project-context.md).
 
+Track completed work, remaining requirements and each member's proposed assignments in the [central task register](docs/task-register.md). Weekly records preserve the history; the register holds current task status and evidence.
+
 For the teacher check, open the [evidence index](docs/evidence-index.md), [current weekly report](docs/progress/current-status.md), [presentation](docs/presentation/pharmacy-is-week10.pptx), and [acceptance report](docs/verification/acceptance-report.md). Run `scripts/verify.ps1` with `DEMO_PASSWORD` set to repeat the isolated technical demonstration on port 8181 without resetting the main database.
 
 ## Current state

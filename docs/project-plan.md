@@ -131,6 +131,8 @@ Ownership remains stable, but every member must complete at least one measurable
 
 ## 10. Weekly project memory
 
+The [central task register](task-register.md) is authoritative for current task IDs, status, owners, deadlines and completion evidence. The weekly files preserve dated plans, actual results and reasons for changes. Reference the same task IDs in both; do not replace historical weekly plans when carrying work forward. Proposed member assignments require team agreement. Implementation roadmap completion does not imply that all later semester criteria or human approvals are complete.
+
 Each week receives `docs/progress/week-XX.md` with:
 
 - planned work;

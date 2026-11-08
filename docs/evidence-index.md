@@ -1,4 +1,4 @@
-# Week 1–10 evidence index
+# Course evidence index — Weeks 1–11
 
 All catch-up artifacts record actual completion on 2026-11-08. Course-week labels do not backdate the work.
 
@@ -14,6 +14,7 @@ All catch-up artifacts record actual completion on 2026-11-08. Course-week label
 | 8 | Cleanup, AI disclosure, slides and status | ai-usage.md; presentation; progress/current-status.md | Prepared; student policy/review confirmation pending |
 | 9 | Search across 2–3 models with empty states | api.py; browser/backend tests | Technically verified |
 | 10 | UI language switching and dictionaries | frontend/src/locales.ts; i18n tests | Technically verified; fluent-speaker review pending |
+| 11 | Protected admin route, user/reference CRUD and deletion confirmation | application.md; verification/week11-design-review.md; admin API/browser tests; commit a0c9548 | Technically verified 2026-11-08; student rehearsal/review unverified |
 
 ## Start here for the practical lesson
 
@@ -21,6 +22,6 @@ All catch-up artifacts record actual completion on 2026-11-08. Course-week label
 2. Open presentation/pharmacy-is-week10.pptx and the exported diagrams.
 3. Follow verification/demo-runbook.md.
 4. Use verification/acceptance-report.md for exact test scope and known limitations.
-5. Agree the next tasks in progress/week-11.md and attach individual evidence.
+5. Agree the next tasks in [task-register.md](task-register.md), reference their IDs in progress/week-11.md and attach actual individual evidence.
 
-The final-exam admin CRUD requirement belongs to Week 11 and is not complete. Phase 9 VPS deployment is also pending. No final-exam score or instructor sign-off is claimed.
+The Week 11 admin CRUD implementation is complete, with scoped technical evidence in verification/acceptance-report.md. Phase 9 VPS deployment and later semester criteria remain tracked in task-register.md. No final-exam score or instructor sign-off is claimed.

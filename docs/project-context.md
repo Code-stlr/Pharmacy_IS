@@ -2,6 +2,8 @@
 
 Read `project-plan.md` for approved scope, architecture, course criteria, and ownership. Root course documents remain governing references.
 
+Read [task-register.md](task-register.md) for current task status, stable area owners, proposed member assignments, remaining semester requirements and completion evidence. Update it alongside the weekly record after every completed part. Optional product ideas are separate from committed requirements.
+
 ## Implemented
 
 - Phase 0 application scaffold with a React/TypeScript frontend and Django API.

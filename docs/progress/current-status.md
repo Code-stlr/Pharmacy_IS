@@ -2,6 +2,8 @@
 
 Prepared 2026-11-08 for Monday 2026-11-09. Stage: **Working System**. Health: **At Risk** for course evidence requiring human confirmation, while the local technical workflow is demonstrable.
 
+The [central task register](../task-register.md) is the current source for status, owners, deadlines and evidence. This report is a summary. Next-member IDs: TEAM-01, DATA-02, UI-03, SEC-01 and QA-02; their assignments/deadlines remain proposed. Remaining Week 12–17 requirements and deployment are tracked there separately from optional product ideas.
+
 ## Team report
 
 - Change since baseline: planning documents and a SQLite prototype became a React/Django/PostgreSQL application with registration, role/ownership checks, patient/inventory forms, prescriptions, dispensing, history, search and en/kk/ru UI.
