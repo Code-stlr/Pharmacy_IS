@@ -9,10 +9,11 @@ Read `project-plan.md` for approved scope, architecture, course criteria, and ow
 - PostgreSQL configuration and an API readiness check.
 - Local Docker Compose topology with an Nginx frontend proxy.
 - Frontend and backend foundation tests.
+- Domain phase (phase 2 of the nine-item roadmap): nine pharmacy models, PostgreSQL constraints, initial migration, repeatable fictional demo seeds, ERD, and domain tests. See `database.md`.
 
 ## Next implementation phase
 
-Design and test the domain models before implementing authentication and dispensing. Decide prescription line quantities, partial dispensing, batch expiry rules, OTC handling, and stock transaction invariants. Preserve `DB/SQLite.db` unchanged as reference. Add a custom user model before creating application migrations to avoid a later auth migration rewrite.
+Implement authentication and role permissions using Django's existing User and Groups. Patient has an optional one-to-one user link. Preserve the existing auth schema; no custom user replacement or database reset is needed. Domain decisions and future dispensing invariants are documented in `database.md`. After security, implement the atomic dispensing service and application screens.
 
 ## Constraints
 

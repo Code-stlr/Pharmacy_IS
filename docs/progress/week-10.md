@@ -49,3 +49,20 @@ Each task needs a reviewed commit and demonstrable evidence before it is marked 
 - Original SQLite SHA-256 remains unchanged.
 
 Local verification used `.env.example` through `PHARMACY_ENV_FILE`; replace its example secrets for normal use. Containers are bound to localhost. There was no browser visual inspection. The build reports a 532 KB JavaScript chunk, and container pytest reports a harmless unwritable cache directory warning. Neither prevented verification.
+
+## Domain milestone — phase 2 of 9
+
+Completed 2026-11-08 on branch `ehsan/domain-models` under Ehsan's direction with Codex assistance. This is AI-assisted implementation under Ehsan's Git identity, not evidence of another member's authorship.
+
+- Added nine domain models and a reversible initial migration to PostgreSQL.
+- Added FK relationships, protected historical references, unique constraints, and price/quantity/date/status checks.
+- Added prescription lines and optional prescription linkage for OTC dispensing.
+- Added model validation for wrong patient/medication relationships and future birth dates.
+- Added atomic, repeatable fictional demo seeding; reruns preserve stock and records.
+- Added `docs/database.md` and Mermaid ERD source in `docs/diagrams/domain-erd.md`.
+- Kept the original SQLite prototype unchanged.
+- Ignored and untracked `Taks/` at Ehsan's request; local assignment files remain present. Existing Git history retains earlier versions.
+
+Verification: 17 backend tests passed against PostgreSQL, including fresh test-database migration, DB constraints, model validation, protected deletion, and repeatable seeds. Django system check passed and `makemigrations --check --dry-run` detected no missing migrations. Seeding twice in the running application succeeded; the live health endpoint remained healthy. Frontend container build passed during integration.
+
+The test filename configuration was expanded to discover Django-style `tests.py` as well as `test_*.py`. Authentication and transactional dispensing remain next. An exported ERD image and browser-based database screens are not implemented in this milestone.
