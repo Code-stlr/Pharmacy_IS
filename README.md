@@ -1,63 +1,78 @@
 # Pharmacy IS
 
-Educational pharmacy web application. Start with [the approved plan](docs/project-plan.md) and [current project context](docs/project-context.md).
+A pharmacy management web application built with React, Django and PostgreSQL. Pharmacists manage patients, prescriptions and inventory; patients view their own records; administrators manage users and reference data.
 
-Track completed work, remaining requirements and each member's proposed assignments in the [central task register](docs/task-register.md). Weekly records preserve the history; the register holds current task status and evidence.
+This is a university MVP using fictional data. It is not intended for real clinical use.
 
-For the teacher check, open the [evidence index](docs/evidence-index.md), [current weekly report](docs/progress/current-status.md), [presentation](docs/presentation/pharmacy-is-week10.pptx), and [acceptance report](docs/verification/acceptance-report.md). Run `scripts/verify.ps1` with `DEMO_PASSWORD` set to repeat the isolated technical demonstration on port 8181 without resetting the main database.
+## Features
 
-## Current state
+- Session-based authentication with Admin, Pharmacist and Patient roles.
+- Patient registration, profiles, prescriptions and dispensing history.
+- Medication catalog, categories, suppliers, doctors and inventory batches.
+- Prescription and OTC dispensing with validation and atomic stock updates.
+- Search across patients, medications and prescriptions.
+- Administrator-only user and reference-data management, with confirmed deletion and protected history.
+- Responsive interface in English, Kazakh and Russian.
 
-Phases 1–6 provide a working React/Django/PostgreSQL MVP: session authentication, role permissions, patient and inventory forms, prescriptions, atomic dispensing, history, multi-entity search and English/Kazakh/Russian interfaces. The original prototype remains unchanged at `DB/SQLite.db`. See [application guide](docs/application.md), [database documentation](docs/database.md), and [ERD](docs/diagrams/domain-erd.md).
+## Stack
 
-## Run locally with Docker
+React, TypeScript, Vite, Material UI and i18next on the frontend. Django REST Framework and PostgreSQL on the backend. Docker Compose runs PostgreSQL, Gunicorn/Django and an Nginx frontend proxy.
 
-Week 11 administration is implemented at `/admin` for Admin accounts, with user/reference CRUD, deletion confirmation and protected clinical history. The frontend now has a responsive sidebar, live overview, searchable ledgers and dialog forms in all three languages. See the [design review and screenshots](docs/verification/week11-design-review.md) and [admin demonstration steps](docs/verification/demo-runbook.md). VPS deployment remains pending; no presentation changes were made for this milestone.
+## Run locally
 
-Requires Docker Desktop with Linux containers and Docker Compose.
+Install Docker Desktop with Linux containers and Docker Compose.
 
 1. Copy `.env.example` to `.env`.
-2. Replace both placeholder secrets with unique local values. For example, generate a secret with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
-3. Run `docker compose up --build`.
-4. Open http://localhost:8080. A successful health check confirms the API can query PostgreSQL.
-
-Compose applies migrations before launching Django. PostgreSQL data persists in the `postgres_data` volume. API schema and documentation require authentication by default and will be available after the authentication phase.
-
-The Compose configuration is for local demonstrations. VPS work still requires TLS, secure production settings, backup procedures, and deployment verification.
-
-## Develop without rebuilding containers
-
-Use Python 3.14 and Node 24. PostgreSQL must be running separately; set the environment variables from `.env.example` in your shell, plus `POSTGRES_HOST` and optionally `POSTGRES_PORT`. Django does not automatically load `.env`; Docker Compose does.
+2. Set a unique `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD` in `.env`. Keep this file out of Git.
+3. Start the application:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python -m pip install -r backend/requirements.txt
-cd backend
-..\.venv\Scripts\python manage.py migrate
-..\.venv\Scripts\python manage.py runserver
+docker compose up --build -d
+docker compose exec backend python manage.py seed_demo
 ```
 
-In a second terminal:
+4. Choose a strong, local-only demo password and create the demo accounts:
+
+```powershell
+$env:DEMO_PASSWORD='replace-with-your-demo-password'
+docker compose exec -e DEMO_PASSWORD=$env:DEMO_PASSWORD backend python manage.py create_demo_users
+```
+
+5. Open [localhost:8080](http://localhost:8080). Sign in as `admin_demo`, `pharmacist_demo` or `patient_demo` using the password you chose. Public registration creates Patient accounts only.
+
+Migrations run on startup. PostgreSQL data persists in a Docker volume. Seed commands create missing records without resetting existing stock or account passwords. API readiness is available at `/api/health/`; authenticated API documentation is at `/api/docs/`.
+
+This configuration is for local use. Public hosting still needs TLS, production settings, secret management and verified backups.
+
+## Tests
+
+For the complete isolated verification, install Node 24 and the browser dependencies, then run:
 
 ```powershell
 cd frontend
 npm ci
-npm run dev
+npx playwright install chromium
+cd ..
+$env:DEMO_PASSWORD='replace-with-your-demo-password'
+./scripts/verify.ps1
 ```
 
-Vite proxies `/api` to Django so session authentication can stay on the same origin.
+The script builds a separate acceptance stack on port 8181 and runs backend, frontend, schema and browser checks without resetting the main database. Use the acceptance accounts' existing password on later runs. See the [application guide](docs/application.md) for individual test commands and development setup.
 
-## Verify
+## Documentation
 
-With `DJANGO_SECRET_KEY` set, run from `backend/`:
+| Document | Contents |
+|---|---|
+| [Application guide](docs/application.md) | Roles, workflows, API, localization and development |
+| [Architecture](docs/architecture.md) | Components, security boundaries and technical decisions |
+| [Database](docs/database.md) | PostgreSQL entities, constraints, migrations and stock rules |
+| [ER diagram](docs/diagrams/domain-erd.md) | Schema relationships and diagram export instructions |
+| [Task register](docs/task-register.md) | Current tasks, owners, deadlines, status and completion evidence |
+| [Weekly progress](docs/progress/current-status.md) | Current team report and preserved weekly history |
+| [Requirements](docs/requirements.md) | Project aim, objectives and acceptance criteria |
+| [AI usage](docs/ai-usage.md) | Assistance disclosure and student verification responsibilities |
+| [Semester plan](semester_mvp_project_plan.md) | Governing weekly course criteria |
 
-```powershell
-..\.venv\Scripts\python manage.py check
-..\.venv\Scripts\python -m pytest
-```
+## Contributing
 
-The foundation tests mock database availability; they do not prove a live PostgreSQL connection. From `frontend/`, run `npm test` and `npm run build`. After starting Compose, check `/api/health/` through port 8080 for the real database readiness result.
-
-## Team workflow
-
-Use a personal feature branch and your own Git identity. Review changes before merging. AI-assisted work is documented in weekly progress; never assign commits to someone who did not author them. Remote pushes by the assistant require Ehsan's explicit approval.
+Use a feature branch and your own Git identity. Include relevant tests and a clear description of the change, then review before merging into `main`. Use fictional data only and disclose AI assistance accurately in contribution descriptions. Never commit credentials or local environment files.

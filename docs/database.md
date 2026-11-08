@@ -1,6 +1,6 @@
-# Domain database — phase 2 of 9
+# PostgreSQL database
 
-PostgreSQL is authoritative. Schema: `backend/pharmacy/models.py`; executable migration: `backend/pharmacy/migrations/0001_initial.py`. The original `DB/SQLite.db` remains unchanged and is not imported automatically.
+PostgreSQL is the application database. Schema: `backend/pharmacy/models.py`; executable migrations: `backend/pharmacy/migrations/`. Develop the schema through versioned Django migrations.
 
 ## Entities and keys
 
@@ -20,7 +20,7 @@ All models have an automatically generated bigint `id` primary key. Foreign keys
 
 See [ERD](diagrams/domain-erd.md).
 
-## Rules implemented in this phase
+## Data rules
 
 - Stock cannot be negative; prices and prescribed/dispensed quantities must be positive.
 - Batch expiry must follow its receipt date. Prescription validity must end on or after its issue date.
@@ -50,4 +50,4 @@ docker compose exec backend python -m pytest -p no:cacheprovider
 
 `seed_demo` is atomic and repeatable: it creates missing fictional records without resetting existing stock, changing prescriptions, or creating login credentials. Dates are relative to the first run and are not extended on rerun. It does not insert dispensing events; use the transactional workflow.
 
-Authentication will use Django's existing User model and Groups (Admin, Pharmacist, Patient), with the optional patient profile relationship. This avoids replacing the auth schema already migrated in Phase 0.
+Authentication uses Django's User model and Groups (Admin, Pharmacist, Patient), with an optional patient profile relationship. The admin API also prevents deletion of linked patient accounts and protects the current administrator and superusers.

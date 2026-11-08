@@ -1,11 +1,8 @@
-# Diagram evidence
+# Database diagram
 
 - `domain-erd.md`: Mermaid source with all nine domain models plus Django User, keys, cardinalities and composite unique keys.
 - `domain-erd.svg`: scalable exported ERD.
-- `use-cases.svg`: UML rectangular actor notation, system boundary and eight implemented use-case groups.
-- `wireframe-patient-search.svg`, `wireframe-prescription-entry.svg`, `wireframe-dispensing.svg`: retrospective low-fidelity screen artifacts dated 2026-11-08.
-
-These exports were visually inspected. They describe the current MVP and must not be presented as proof of artifacts produced during the original Weeks 2–4.
+Keep the Mermaid source and exported SVG in sync with schema changes.
 
 ## Re-export
 

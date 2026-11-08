@@ -6,6 +6,8 @@ The [central task register](../task-register.md) is the current source for statu
 
 ## Team report
 
+Documentation layout: the task register, progress history, requirements, AI disclosure and semester plan are shared in Git. Presentations and detailed course/verification artifacts are kept separately as private team material; references to them below describe internal evidence, not additional public files.
+
 - Change since baseline: planning documents and a SQLite prototype became a React/Django/PostgreSQL application with registration, role/ownership checks, patient/inventory forms, prescriptions, dispensing, history, search and en/kk/ru UI.
 - Evidence: requirements.md, competitor-analysis.md, use-cases.md, exported diagrams, presentation deck, application.md, and verification/acceptance-report.md.
 - Technical demonstration: create a prescription, dispense, show stock decrement/history, reject excessive quantity, switch roles and languages.

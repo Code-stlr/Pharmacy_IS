@@ -1,6 +1,6 @@
 # Pharmacy IS — central task register
 
-Updated 2026-11-08. This is the authoritative list of task status, assignment, deadline and completion evidence. [Current status](progress/current-status.md) summarizes it; [weekly records](progress/week-11.md) preserve what was planned and what actually happened. The [approved project plan](project-plan.md) and [semester criteria](../semester_mvp_project_plan.md) govern scope.
+Updated 2026-11-08. This is the authoritative list of task status, assignment, deadline and completion evidence. [Current status](progress/current-status.md) summarizes it; [weekly records](progress/week-11.md) preserve what was planned and what actually happened. The [requirements](requirements.md) and [semester criteria](../semester_mvp_project_plan.md) govern scope.
 
 ## Working rules
 
@@ -28,18 +28,18 @@ All rows below completed **2026-11-08** by **Ehsan-directed, Codex-assisted work
 
 | ID | Delivered task | Course criterion | Status | Evidence |
 |---|---|---|---|---|
-| BASE-01 | Agree scope, stack, roles and definition of done | Weeks 1–2 | Done | `91336c2`; [approved plan](project-plan.md) |
+| BASE-01 | Agree scope, stack, roles and definition of done | Weeks 1–2 | Done | `91336c2`; agreement retained privately; public [requirements](requirements.md) |
 | BASE-02 | React/Django/PostgreSQL foundation, Docker and preserved SQLite | Weeks 2, 4 | Done | `50092c4`, `a1cf426`; [README](../README.md) |
 | DATA-01 | Nine domain models, constraints, migrations, seeds and ERD | Week 4 | Done | `d8df053`; [database guide](database.md) |
 | AUTH-01 | Registration, sessions, CSRF, roles and patient ownership | Week 5 | Done | `c2f1ea0`; backend auth/permission tests |
-| FLOW-01 | Rx/OTC dispensing, validation, atomic stock updates and history | Weeks 6–7 | Done | `c2f1ea0`; concurrency tests and [acceptance report](verification/acceptance-report.md) |
+| FLOW-01 | Rx/OTC dispensing, validation, atomic stock updates and history | Weeks 6–7 | Done | `c2f1ea0`; concurrency tests and [test workflow](../scripts/verify.ps1) |
 | UI-01 | Patient/inventory forms, profiles and multi-entity search | Weeks 7, 9 | Done | `bb034cd`; browser workflows |
 | LANG-01 | English, Kazakh and Russian functional UI dictionaries | Week 10 | Done | `bb034cd`, `a0c9548`; key-parity and language-switch tests. Fluent-speaker approval remains LANG-02. |
-| DOC-01 | Requirements, analysis, UML/ERD, wireframes, AI disclosure and course artifacts | Weeks 1–3, 7–8 | Done | `d710d15`; [evidence index](evidence-index.md). Human approval/review remains below. |
-| QA-01 | Reproducible isolated acceptance stack and local demo runbook | Verification roadmap | Done | `d710d15`, `a0c9548`; [acceptance report](verification/acceptance-report.md): 52 tests plus 21 backend subtests |
-| ADMIN-01 | Protected admin route, user/reference CRUD, confirmation and history protection | Week 11 | Done | `a0c9548`; admin API/browser tests; [demo steps](verification/demo-runbook.md) |
-| UI-02 | Responsive workspace redesign, real overview and reviewed screenshots | Frontend improvement | Done | `a0c9548`; [design review](verification/week11-design-review.md) |
-| REVIEW-01 | Review all milestone work for main integration and rerun full acceptance | Repository integration | Done | Reviewed baseline `63c4572`; [integration review](verification/main-integration-review.md); Codex review under Ehsan's direction, not independent teammate review |
+| DOC-01 | Requirements, analysis, UML/ERD, wireframes, AI disclosure and course artifacts | Weeks 1–3, 7–8 | Done | `d710d15`; [requirements](requirements.md) and internal course artifacts. Human approval/review remains below. |
+| QA-01 | Reproducible isolated acceptance stack and local demo runbook | Verification roadmap | Done | `d710d15`, `a0c9548`; [test workflow](../scripts/verify.ps1): 52 tests plus 21 backend subtests |
+| ADMIN-01 | Protected admin route, user/reference CRUD, confirmation and history protection | Week 11 | Done | `a0c9548`; admin API/browser tests; [admin guide](application.md#admin-panel) |
+| UI-02 | Responsive workspace redesign, real overview and reviewed screenshots | Frontend improvement | Done | `a0c9548`; [frontend source](../frontend/src/Dashboard.tsx); detailed visual review retained privately |
+| REVIEW-01 | Review all milestone work for main integration and rerun full acceptance | Repository integration | Done | Reviewed baseline `63c4572`; merge commit `803debe`; detailed integration review retained privately; Codex review under Ehsan's direction, not independent teammate review |
 
 ## Next member tasks — proposed, awaiting team agreement
 
@@ -88,5 +88,9 @@ Owners here are proposed coordinators within their stable areas, not evidence th
 When finishing an open task, update its row and add its result below or link a dated weekly entry containing: **ID; actual contributor(s); actual completion date; branch/commit; observable result; test/demo evidence; reviewer and review outcome; remaining limits**. Do not mark independent review complete without naming the person who actually performed it. If scope, status or deadline changes, record the reason in the weekly record.
 
 ## Register history
+
+- 2026-11-08: Ehsan clarified the public boundary: restored this register, progress folder, requirements, AI disclosure and semester plan for shared Git tracking. Presentations and detailed internal evidence stay private. Public links now point to available source/tests; private evidence is identified without requiring a private file to navigate the register. This supersedes the earlier local-only tracking arrangement below.
+
+- 2026-11-08: Documentation cleanup under Ehsan's direction moved this register, weekly/course artifacts and legacy SQLite into ignored `.private/`. Public README/technical docs were simplified; the internal project agreement no longer duplicates the completed Week 1–10 feature scope or contains a SQLite section. See `../DOCUMENTATION.md`. This is local preparation; previously published history/branches remain public until separately addressed.
 
 - 2026-11-08: Created from the approved plan, existing weekly records, verified local commit history and acceptance evidence. Imported completed baseline without assigning it to absent teammates; copied next-member tasks as proposals; added remaining semester/deployment requirements and separated optional ideas. This register itself is AI-assisted documentation under Ehsan's direction.

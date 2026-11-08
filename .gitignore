@@ -10,3 +10,4 @@ Taks/
 playwright-report/
 test-results/
 .build/
+.private/
