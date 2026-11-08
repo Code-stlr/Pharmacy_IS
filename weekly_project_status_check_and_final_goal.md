@@ -1,6 +1,8 @@
 # Weekly Project Status Check
 **Information Systems Project Plan from Now to Week 15**
 
+**Current filled Pharmacy IS report:** [Week 11 readiness and team status](docs/progress/current-status.md). See the [course evidence index](docs/evidence-index.md) and [technical acceptance report](docs/verification/acceptance-report.md). The instructor framework below is preserved as the governing reporting guidance.
+
 ---
 
 ## Main Goal

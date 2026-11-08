@@ -1,0 +1,20 @@
+{
+  "desktop": {
+    "title": "Pharmacy IS — Admin panel",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "overflow": false,
+    "fonts": "loaded",
+    "h1": "Access & administration",
+    "errors": []
+  },
+  "mobile": {
+    "title": "Pharmacy IS — Admin panel",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false,
+    "fonts": "loaded",
+    "h1": "Access & administration",
+    "errors": []
+  }
+}
