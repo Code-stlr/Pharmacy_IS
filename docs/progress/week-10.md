@@ -103,3 +103,19 @@ Browser verification added fictional patients and prescription records and consu
 ### Remaining work
 
 Phase 7: course documentation, competitor analysis, SWOT, use-case diagram, exported ERD and presentation evidence. Phase 8: broader acceptance/security/accessibility review and clean-environment demonstration. Phase 9: VPS deployment. The dedicated Week 11 admin dashboard is still pending. Production-scale pagination, distributed throttling and clinical decision support are not part of this milestone.
+
+## Evidence and acceptance milestones — phases 7 and 8
+
+Completed 2026-11-08 on `ehsan/evidence-verification`, under Ehsan's direction with Codex assistance.
+
+- Prepared measurable aim/five objectives, functional acceptance criteria, architecture and actor/use-case documents.
+- Researched two real competitors using official product pages, produced a six-criterion comparison and actionable SWOT.
+- Exported UML, complete PK/FK/cardinality ERD and three retrospective wireframes as SVG.
+- Created and visually inspected a 12-slide editable presentation, with sources and limitations in speaker notes.
+- Added reconstructed week-01 through week-09 criterion records, a current filled teacher report, AI disclosure and proposed week-11 member tasks with deadlines.
+- Added repeatable isolated acceptance automation, accessibility/keyboard checks, empty-state and translated-network-error tests.
+- Found and fixed the language selector's contrast and accessible-label defects.
+- Final isolated run passed 33 backend tests plus 3 subtests, 4 frontend tests and 6 browser tests; production build, migrations, schema and health checks passed.
+- Simulated public internet unavailability for browser requests while preserving loopback access. The physical adapter was not disconnected.
+
+Technical artifacts and assistant-run acceptance are ready. Instructor topic approval, actual individual student review/contribution evidence, fluent-speaker translation review and team rehearsal remain unverified human actions. Do not backdate this catch-up or claim those actions occurred. Phase 9 and the dedicated Week 11 admin milestone are pending.

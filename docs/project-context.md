@@ -15,7 +15,9 @@ Read `project-plan.md` for approved scope, architecture, course criteria, and ow
 
 Phases 3–6 now provide session authentication, patient registration, Admin/Pharmacist/Patient authorization, scoped patient data, account profile editing, transactional Rx/OTC dispensing, resource forms, history, multi-entity search, and complete UI dictionaries for English/Kazakh/Russian. See `application.md` for endpoints, operation and limitations. Django's existing User and Groups remain authoritative for roles.
 
-Next is phase 7: course evidence and presentation artifacts, followed by the broader phase 8 verification milestone and phase 9 VPS deployment. The dedicated Week 11 admin dashboard is still pending. Existing tests provide implementation evidence but do not replace a full acceptance review.
+Phase 7 artifacts and Phase 8 local technical acceptance are now prepared. Start at `evidence-index.md`, `progress/current-status.md`, and `verification/acceptance-report.md`. The 12-slide editable deck is in `presentation/`. Weekly criterion records 01–09 are explicitly reconstructed with actual completion dates; week-10.md contains the implementation history and week-11.md contains proposed future member tasks.
+
+Only Phase 9 remains from the nine-item technical roadmap. The separate Week 11 dedicated admin dashboard is still pending, as are instructor topic-approval evidence, student AI-policy/review confirmation, fluent-speaker translation review and actual team rehearsal. Do not describe those human actions as completed.
 
 ## Constraints
 

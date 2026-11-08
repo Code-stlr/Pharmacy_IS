@@ -2,6 +2,8 @@
 
 Educational pharmacy web application. Start with [the approved plan](docs/project-plan.md) and [current project context](docs/project-context.md).
 
+For the teacher check, open the [evidence index](docs/evidence-index.md), [current weekly report](docs/progress/current-status.md), [presentation](docs/presentation/pharmacy-is-week10.pptx), and [acceptance report](docs/verification/acceptance-report.md). Run `scripts/verify.ps1` with `DEMO_PASSWORD` set to repeat the isolated technical demonstration on port 8181 without resetting the main database.
+
 ## Current state
 
 Phases 1–6 provide a working React/Django/PostgreSQL MVP: session authentication, role permissions, patient and inventory forms, prescriptions, atomic dispensing, history, multi-entity search and English/Kazakh/Russian interfaces. The original prototype remains unchanged at `DB/SQLite.db`. See [application guide](docs/application.md), [database documentation](docs/database.md), and [ERD](docs/diagrams/domain-erd.md).

@@ -49,7 +49,7 @@ erDiagram
     Patient {
         bigint id PK
         string reference UK
-        bigint user_id FK,UK
+        int user_id FK,UK
         string full_name
         date date_of_birth
         string phone
@@ -84,7 +84,7 @@ erDiagram
         bigint id PK
         string reference UK
         bigint patient_id FK
-        bigint pharmacist_id FK
+        int pharmacist_id FK
         bigint batch_id FK
         bigint prescription_line_id FK
         int quantity
@@ -93,4 +93,4 @@ erDiagram
     }
 ```
 
-Composite unique keys: Medication(name, strength, dosage_form), DrugBatch(medication_id, lot_number), PrescriptionLine(prescription_id, medication_id). A prescription may have zero lines while being drafted; the later dispensing workflow must reject empty prescriptions.
+Composite unique keys: Medication(name, strength, dosage_form), DrugBatch(medication_id, lot_number), PrescriptionLine(prescription_id, medication_id). The prescription API rejects empty line lists. Django User uses an integer PK, so its referencing columns use integer rather than bigint.

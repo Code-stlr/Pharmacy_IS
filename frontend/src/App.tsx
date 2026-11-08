@@ -289,10 +289,11 @@ export default function App() {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             {t("title")}
           </Typography>
+          <Typography id="language-label">{t("language")}</Typography>
           <TextField
             select
             size="small"
-            label={t("language")}
+            slotProps={{ select: { labelId: "language-label" } }}
             value={i18n.language}
             onChange={(e) => void i18n.changeLanguage(e.target.value)}
             sx={{ bgcolor: "white", minWidth: 140 }}
@@ -455,8 +456,12 @@ export default function App() {
                     rows.map((row) => (
                       <Paper key={row.id} sx={{ p: 2 }}>
                         <Stack spacing={1}>
-                          <Typography variant="h6" component="h2">{label(row)}</Typography>
-                          {row.medication_name && <Typography>{row.medication_name}</Typography>}
+                          <Typography variant="h6" component="h2">
+                            {label(row)}
+                          </Typography>
+                          {row.medication_name && (
+                            <Typography>{row.medication_name}</Typography>
+                          )}
                           {Object.entries(row)
                             .filter(
                               ([key]) =>
@@ -475,25 +480,29 @@ export default function App() {
                             .map(([key, value]) => (
                               <Typography key={key} variant="body2">
                                 {t(key)}:{" "}
-                                {key === "dispensed_at" ? new Date(String(value)).toLocaleString(i18n.language) : typeof value === "boolean"
-                                  ? t(value ? "yes" : "no")
-                                  : key === "status"
-                                    ? t(String(value))
-                                    : resources[page]?.find(
-                                          (f) => f.name === key,
-                                        )?.relation
-                                      ? label(
-                                          (
-                                            data[
-                                              resources[page].find(
-                                                (f) => f.name === key,
-                                              )!.relation!
-                                            ] || []
-                                          ).find((x) => x.id === value) || {
-                                            id: value,
-                                          },
-                                        )
-                                      : String(value ?? "—")}
+                                {key === "dispensed_at"
+                                  ? new Date(String(value)).toLocaleString(
+                                      i18n.language,
+                                    )
+                                  : typeof value === "boolean"
+                                    ? t(value ? "yes" : "no")
+                                    : key === "status"
+                                      ? t(String(value))
+                                      : resources[page]?.find(
+                                            (f) => f.name === key,
+                                          )?.relation
+                                        ? label(
+                                            (
+                                              data[
+                                                resources[page].find(
+                                                  (f) => f.name === key,
+                                                )!.relation!
+                                              ] || []
+                                            ).find((x) => x.id === value) || {
+                                              id: value,
+                                            },
+                                          )
+                                        : String(value ?? "—")}
                               </Typography>
                             ))}
                           {row.patient_name && (
