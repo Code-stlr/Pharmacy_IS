@@ -1,7 +1,7 @@
 from django.db import connection, DatabaseError
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from pharmacy import api, auth
+from pharmacy import api, auth, admin_api
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.decorators import api_view, permission_classes
@@ -25,6 +25,9 @@ def health(request):
 router = DefaultRouter()
 for prefix, view in [("patients", api.PatientViewSet), ("categories", api.CategoryViewSet), ("suppliers", api.SupplierViewSet), ("doctors", api.DoctorViewSet), ("medications", api.MedicationViewSet), ("batches", api.BatchViewSet), ("prescriptions", api.PrescriptionViewSet), ("dispensings", api.DispensingViewSet)]:
     router.register(prefix, view)
+
+for prefix, view in [('users', admin_api.AdminUserViewSet), ('categories', admin_api.AdminCategoryViewSet), ('suppliers', admin_api.AdminSupplierViewSet), ('doctors', admin_api.AdminDoctorViewSet), ('medications', admin_api.AdminMedicationViewSet), ('patients', admin_api.AdminPatientViewSet)]:
+    router.register('admin/' + prefix, view, basename='admin-' + prefix)
 
 urlpatterns = [
     path("api/auth/csrf/", auth.csrf),

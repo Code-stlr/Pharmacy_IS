@@ -40,7 +40,7 @@ test("local workflows operate with all public network requests blocked", async (
   await page.getByLabel("Username").fill("pharmacist_demo");
   await page.getByLabel("Password").fill(process.env.DEMO_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await page.getByRole("button", { name: "Medications", exact: true }).click();
+  await page.getByRole("link", { name: "Medications", exact: true }).click();
   await page.getByLabel("Search").fill("no-such-medication-acceptance");
   await expect(
     page.getByText("No records found", { exact: true }),
@@ -48,6 +48,7 @@ test("local workflows operate with all public network requests blocked", async (
   const health = await page.request.get(baseURL + "/api/health/");
   expect((await health.json()).status).toBe("ok");
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".page-heading")).toHaveCSS("opacity", "1");
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa"])
     .analyze();

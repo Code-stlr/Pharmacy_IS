@@ -1,4 +1,4 @@
-# Application guide — phases 3–6
+# Application guide — core workflows and Week 11 administration
 
 ## Run and sign in
 
@@ -20,7 +20,15 @@ The current local verification database has these three accounts with the passwo
 - Patient: view only their linked patient record, prescriptions and dispensing history; edit their own account name/email. Their phone can also be updated through `/api/auth/patient/`. Clinical identity and allergy notes are staff-managed.
 - Anonymous or unassigned users cannot access domain records. Superusers are treated as Admin.
 
-The frontend hides staff actions for patients. The API independently applies role checks and ownership filters. There is no deletion API for clinical history and no stock edit API. Batch corrections, returns, cancellations and a dedicated admin panel are later work.
+The frontend hides staff actions for patients. The API independently applies role checks and ownership filters. Admins also have `/admin` for user and reference-record management. There is no deletion API for clinical history and no stock edit API. Batch corrections, returns and cancellations remain later work.
+
+## Week 11 admin panel
+
+Sign in as `admin_demo` and select Admin panel. Users, Medications, Categories, Suppliers, Doctors and Patients support search, creation, editing and confirmed deletion of eligible records. Passwords are required when creating users and optional when editing; stored passwords use Django hashing. Role assignment is restricted to administrators.
+
+The separate `/api/admin/{users,medications,categories,suppliers,doctors,patients}/` endpoints support GET, POST, PATCH and DELETE. They independently reject non-admin access. Linked clinical records cannot be deleted. Superusers and the current administrator are protected from destructive account changes; serialized account administration preserves an active administrator. Deactivate eligible linked accounts instead of erasing history. No admin endpoint deletes prescriptions, batches or dispensing transactions.
+
+The redesigned workspace has an overview with real scoped counts, inventory availability and recent dispensing, sidebar navigation, mobile navigation, searchable ledgers and dialog forms. See `frontend-design-spec.md` and `verification/week11-design-review.md` for design decisions and reviewed screenshots.
 
 ## Demonstrate the main workflow
 

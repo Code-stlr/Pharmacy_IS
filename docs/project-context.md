@@ -17,7 +17,9 @@ Phases 3–6 now provide session authentication, patient registration, Admin/Pha
 
 Phase 7 artifacts and Phase 8 local technical acceptance are now prepared. Start at `evidence-index.md`, `progress/current-status.md`, and `verification/acceptance-report.md`. The 12-slide editable deck is in `presentation/`. Weekly criterion records 01–09 are explicitly reconstructed with actual completion dates; week-10.md contains the implementation history and week-11.md contains proposed future member tasks.
 
-Only Phase 9 remains from the nine-item technical roadmap. The separate Week 11 dedicated admin dashboard is still pending, as are instructor topic-approval evidence, student AI-policy/review confirmation, fluent-speaker translation review and actual team rehearsal. Do not describe those human actions as completed.
+Only Phase 9 (VPS deployment) remains from the nine-item technical roadmap. The separate Week 11 admin panel and frontend redesign were implemented on 2026-11-08, with 52 passing tests plus 21 backend subtests. Read `verification/week11-design-review.md`, `application.md` and the completion entry in `progress/week-11.md`. Admin APIs are isolated under `/api/admin/`; the UI uses Workspace, Dashboard, RecordList, ResourceForm and AdminPanel components with merged three-language dictionaries. Presentation files were not changed for this milestone.
+
+Instructor topic-approval evidence, student AI-policy/review confirmation, fluent-speaker translation review and actual team rehearsal remain pending. Do not describe those human actions as completed.
 
 ## Constraints
 

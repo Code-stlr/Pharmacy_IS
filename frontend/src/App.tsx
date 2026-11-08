@@ -1,25 +1,15 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Alert,
-  AppBar,
-  Box,
-  Button,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  MenuItem,
-  Paper,
-  Stack,
-  TextField,
-  Toolbar,
-  Typography,
-} from "@mui/material";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Alert, Button, TextField } from "@mui/material";
 import { api, ApiError, type RecordData, type User } from "./api";
-import { languages } from "./i18n";
-import { resources, type Field } from "./resources";
+import Workspace, { Brand, LanguageSelect, PageHeader } from "./Workspace";
+import Dashboard from "./Dashboard";
+import RecordList from "./RecordList";
+import ResourceForm from "./ResourceForm";
+import AdminPanel from "./AdminPanel";
+import Icon from "./Icon";
+import "./styles.css";
 
 const endpoints = [
   "patients",
@@ -39,31 +29,40 @@ const editable = [
   "doctors",
 ];
 export default function App() {
-  const { t, i18n } = useTranslation();
-  const [user, setUser] = useState<User | null>(null);
-  const [checking, setChecking] = useState(true);
-  const [registering, setRegistering] = useState(false);
-  const [page, setPage] = useState("patients");
-  const [data, setData] = useState<Record<string, RecordData[]>>({});
-  const [rows, setRows] = useState<RecordData[]>([]);
-  const [search, setSearch] = useState("");
-  const [form, setForm] = useState<Record<string, any> | null>(null);
-  const [lines, setLines] = useState<Record<string, any>[]>([]);
-  const [message, setMessage] = useState("");
-  const [fields, setFields] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState(false);
-  const [revision, setRevision] = useState(0);
+  const { t, i18n } = useTranslation(),
+    location = useLocation(),
+    navigate = useNavigate();
+  const page = location.pathname.split("/")[1] || "overview";
+  const [user, setUser] = useState<User | null>(null),
+    [checking, setChecking] = useState(true),
+    [registering, setRegistering] = useState(false);
+  const [data, setData] = useState<Record<string, RecordData[]>>({}),
+    [rows, setRows] = useState<RecordData[]>([]),
+    [search, setSearch] = useState("");
+  const [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [revision, setRevision] = useState(0);
+  const [form, setForm] = useState<{
+    resource: string;
+    record?: RecordData;
+  } | null>(null);
   const staff = user?.role === "Admin" || user?.role === "Pharmacist";
   useEffect(() => {
     document.documentElement.lang = i18n.language;
-  }, [i18n.language]);
+    document.title = t("title") + " — " + t(page);
+  }, [i18n.language, page, t]);
   useEffect(() => {
     api("auth/me/")
       .then(setUser)
       .catch(() => {})
       .finally(() => setChecking(false));
   }, []);
+  useEffect(() => {
+    setRows([]);
+    setSearch("");
+    setMessage("");
+    setForm(null);
+  }, [page]);
   useEffect(() => {
     if (!user) return;
     let active = true;
@@ -72,7 +71,9 @@ export default function App() {
       .then((entries) => {
         if (active) setData(Object.fromEntries(entries));
       })
-      .catch(showError)
+      .catch((e) => {
+        if (active) showError(e);
+      })
       .finally(() => {
         if (active) setBusy(false);
       });
@@ -83,15 +84,17 @@ export default function App() {
   useEffect(() => {
     if (!user || !endpoints.includes(page)) return;
     let active = true;
-    const timer = setTimeout(() => {
-      api(page + "/?search=" + encodeURIComponent(search))
-        .then((value) => {
-          if (active) setRows(value);
-        })
-        .catch((error) => {
-          if (active) showError(error);
-        });
-    }, 200);
+    const timer = setTimeout(
+      () =>
+        api(page + "/?search=" + encodeURIComponent(search))
+          .then((value) => {
+            if (active) setRows(value);
+          })
+          .catch((e) => {
+            if (active) showError(e);
+          }),
+      200,
+    );
     return () => {
       active = false;
       clearTimeout(timer);
@@ -99,528 +102,335 @@ export default function App() {
   }, [user?.id, page, search, revision]);
   function showError(error: unknown) {
     setMessage(error instanceof ApiError ? error.code : "error");
-    setFields(error instanceof ApiError ? error.fields : []);
-  }
-  function changePage(next: string) {
-    setPage(next);
-    setRows([]);
-    setForm(null);
-    setLines([]);
-    setSearch("");
-    setMessage("");
-    setFields([]);
-  }
-  function startForm(row?: RecordData) {
-    setForm(
-      row
-        ? { ...row }
-        : Object.fromEntries(
-            (resources[page] || []).map((field) => [
-              field.name,
-              field.type === "boolean" ? true : "",
-            ]),
-          ),
-    );
-    setLines(
-      page === "prescriptions"
-        ? [{ medication: "", quantity_prescribed: 1, directions: "" }]
-        : [],
-    );
-    setMessage("");
-    setFields([]);
-  }
-  function label(item: RecordData): string {
-    return (
-      String(
-        item.full_name ||
-          item.name ||
-          item.reference ||
-          item.medication_name ||
-          item.id,
-      ) +
-      (item.strength ? " · " + item.strength : "") +
-      (item.lot_number
-        ? " · " + item.lot_number + " · " + item.stock_quantity
-        : "")
-    );
-  }
-  const lineOptions: RecordData[] = (data.prescriptions || [])
-    .filter((p) => !form?.patient || p.patient === Number(form.patient))
-    .flatMap((p) =>
-      p.lines
-        .filter((l: RecordData) => l.remaining > 0 && p.status === "active")
-        .map((l: RecordData) => ({
-          ...l,
-          name:
-            p.reference +
-            " · " +
-            l.medication_name +
-            " · " +
-            t("remaining") +
-            ": " +
-            l.remaining,
-        })),
-    );
-  function input(
-    field: Field,
-    values: Record<string, any>,
-    update: (name: string, value: any) => void,
-  ) {
-    const options =
-      field.relation === "lines"
-        ? lineOptions
-        : data[field.relation || ""] || [];
-    const select = Boolean(field.relation) || field.type === "boolean";
-    return (
-      <TextField
-        key={field.name}
-        label={t(field.name)}
-        value={values[field.name] ?? ""}
-        select={select}
-        required={!field.optional}
-        error={fields.includes(field.name)}
-        type={
-          select
-            ? undefined
-            : field.type === "number" || field.type === "decimal"
-              ? "number"
-              : field.type || "text"
-        }
-        slotProps={{
-          inputLabel: { shrink: true },
-          htmlInput: {
-            min: field.name === "stock_quantity" ? 0 : 1,
-            step: field.type === "decimal" ? "0.01" : undefined,
-          },
-        }}
-        onChange={(event) =>
-          update(
-            field.name,
-            field.type === "boolean"
-              ? event.target.value === "true"
-              : field.relation ||
-                  field.type === "number" ||
-                  field.type === "decimal"
-                ? event.target.value === ""
-                  ? ""
-                  : Number(event.target.value)
-                : event.target.value,
-          )
-        }
-      >
-        {select &&
-          (field.type === "boolean"
-            ? [
-                <MenuItem key="true" value="true">
-                  {t("yes")}
-                </MenuItem>,
-                <MenuItem key="false" value="false">
-                  {t("no")}
-                </MenuItem>,
-              ]
-            : [
-                <MenuItem key="none" value="">
-                  {t("none")}
-                </MenuItem>,
-                ...options.map((item) => (
-                  <MenuItem key={item.id} value={item.id}>
-                    {label(item)}
-                  </MenuItem>
-                )),
-              ])}
-      </TextField>
-    );
   }
   async function authenticate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setMessage("");
-    const values = Object.fromEntries(new FormData(event.currentTarget));
+    const payload = Object.fromEntries(new FormData(event.currentTarget));
     try {
       setUser(
         await api(
           "auth/" + (registering ? "register/" : "login/"),
           "POST",
-          values,
+          payload,
         ),
       );
       setRevision((x) => x + 1);
-    } catch (error) {
-      showError(error);
+    } catch (e) {
+      showError(e);
     } finally {
       setBusy(false);
     }
   }
-  async function save() {
-    if (!form) return;
-    setBusy(true);
-    setMessage("");
-    setFields([]);
-    setConfirm(false);
+  async function logout() {
     try {
-      const payload = { ...form };
-      delete payload.id;
-      if (page === "prescriptions") payload.lines = lines;
-      if (page === "dispense")
-        payload.prescription_line = payload.prescription_line || null;
-      await api(
-        page === "profile"
-          ? "auth/me/"
-          : (page === "dispense" ? "dispensings" : page) +
-              "/" +
-              (form.id ? form.id + "/" : ""),
-        page === "profile" || form.id ? "PATCH" : "POST",
-        payload,
-      );
-      if (page === "profile") setUser(await api("auth/me/"));
-      setForm(null);
-      setRevision((x) => x + 1);
-      setMessage("saved");
-    } catch (error) {
-      showError(error);
-    } finally {
-      setBusy(false);
+      await api("auth/logout/", "POST");
+      setUser(null);
+      setData({});
+      setRows([]);
+      setMessage("");
+      navigate("/");
+    } catch (e) {
+      showError(e);
     }
   }
-  return (
-    <>
-      <AppBar position="static">
-        <Toolbar sx={{ gap: 2, flexWrap: "wrap", py: 2 }}>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            {t("title")}
-          </Typography>
-          <Typography id="language-label">{t("language")}</Typography>
-          <TextField
-            select
-            size="small"
-            slotProps={{ select: { labelId: "language-label" } }}
-            value={i18n.language}
-            onChange={(e) => void i18n.changeLanguage(e.target.value)}
-            sx={{ bgcolor: "white", minWidth: 140 }}
-          >
-            {Object.entries(languages).map(([code, name]) => (
-              <MenuItem key={code} value={code}>
-                {name}
-              </MenuItem>
-            ))}
-          </TextField>
-          {user && (
+  async function save(values: Record<string, any>) {
+    if (!form) return;
+    const resource = form.resource,
+      record = form.record;
+    await api(
+      resource === "profile"
+        ? "auth/me/"
+        : (resource === "dispense" ? "dispensings" : resource) +
+            "/" +
+            (record ? record.id + "/" : ""),
+      resource === "profile" || record ? "PATCH" : "POST",
+      values,
+    );
+    if (resource === "profile") setUser(await api("auth/me/"));
+    setRevision((x) => x + 1);
+    setMessage("saved");
+  }
+  if (checking)
+    return (
+      <div className="startup">
+        <Brand />
+        <p role="status">{t("loading")}</p>
+      </div>
+    );
+  if (!user)
+    return (
+      <div className="auth-page">
+        <section className="auth-story">
+          <Brand />
+          <div className="auth-editorial">
+            <span className="eyebrow">{t("connectedCare")}</span>
+            <h1>
+              {t("authHeadline")}
+              <em>{t("authAccent")}</em>
+            </h1>
+            <p>{t("authDescription")}</p>
+            <div className="auth-proof">
+              <span>
+                <Icon name="patients" />
+                {t("patients")}
+              </span>
+              <span>
+                <Icon name="prescriptions" />
+                {t("prescriptions")}
+              </span>
+              <span>
+                <Icon name="batches" />
+                {t("batches")}
+              </span>
+            </div>
+          </div>
+          <span className="auth-edition">01 / PHARMACY IS</span>
+        </section>
+        <section className="auth-form-side">
+          <div className="auth-language">
+            <LanguageSelect />
+          </div>
+          <form onSubmit={authenticate} className="auth-form">
+            <span className="eyebrow">
+              {t(registering ? "patientPortal" : "welcomeBack")}
+            </span>
+            <h2>{t(registering ? "register" : "login")}</h2>
+            <p>{t(registering ? "registerDescription" : "loginDescription")}</p>
+            {message && (
+              <Alert severity="error">
+                {t(message, { defaultValue: t("error") })}
+              </Alert>
+            )}
+            <TextField
+              fullWidth
+              label={t("username")}
+              name="username"
+              required
+              autoComplete="username"
+            />
+            <TextField
+              fullWidth
+              label={t("password")}
+              name="password"
+              type="password"
+              required
+              autoComplete={registering ? "new-password" : "current-password"}
+            />
+            {registering && (
+              <>
+                <TextField
+                  fullWidth
+                  label={t("full_name")}
+                  name="full_name"
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label={t("date_of_birth")}
+                  name="date_of_birth"
+                  type="date"
+                  required
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+              </>
+            )}
             <Button
-              color="inherit"
-              onClick={async () => {
-                try {
-                  await api("auth/logout/", "POST");
-                  setUser(null);
-                  setData({});
-                  setRows([]);
-                  setForm(null);
-                  setMessage("");
-                } catch (error) {
-                  showError(error);
-                }
-              }}
+              fullWidth
+              variant="contained"
+              type="submit"
+              disabled={busy}
+              endIcon={<Icon name="arrow" />}
             >
-              {t("logout")}
+              {t(registering ? "register" : "login")}
             </Button>
-          )}
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Stack spacing={3}>
-          <Typography color="text.secondary">{t("demoNotice")}</Typography>
-          {message && (
-            <Alert severity={message === "saved" ? "success" : "error"}>
-              {t(message, { defaultValue: t("error") })}
-            </Alert>
-          )}
-          {checking ? (
-            <Typography role="status">{t("loading")}</Typography>
-          ) : !user ? (
-            <Paper sx={{ p: 3, maxWidth: 480 }}>
-              <Stack component="form" spacing={2} onSubmit={authenticate}>
-                <Typography component="h1" variant="h5">
-                  {t(registering ? "register" : "login")}
-                </Typography>
-                <TextField
-                  label={t("username")}
-                  name="username"
-                  required
-                  autoComplete="username"
-                />
-                <TextField
-                  label={t("password")}
-                  name="password"
-                  type="password"
-                  required
-                  autoComplete={
-                    registering ? "new-password" : "current-password"
-                  }
-                />
-                {registering && (
-                  <>
-                    <TextField
-                      label={t("full_name")}
-                      name="full_name"
-                      required
-                    />
-                    <TextField
-                      label={t("date_of_birth")}
-                      name="date_of_birth"
-                      type="date"
-                      required
-                      slotProps={{ inputLabel: { shrink: true } }}
-                    />
-                  </>
-                )}
-                <Button variant="contained" type="submit" disabled={busy}>
-                  {t(registering ? "register" : "login")}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setRegistering(!registering);
-                    setMessage("");
-                  }}
-                >
-                  {t(registering ? "login" : "register")}
-                </Button>
-              </Stack>
-            </Paper>
-          ) : (
-            <>
-              <Typography>
-                {user.username} · {t(user.role || "unauthorized")}
-              </Typography>
-              <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-                {(staff
-                  ? [...endpoints, "dispense", "profile"]
-                  : ["patients", "prescriptions", "dispensings", "profile"]
-                ).map((key) => (
-                  <Button
-                    key={key}
-                    variant={page === key ? "contained" : "outlined"}
-                    onClick={() => changePage(key)}
-                  >
-                    {t(key)}
-                  </Button>
-                ))}
-              </Stack>
-              <Typography component="h1" variant="h4">
-                {t(page)}
-              </Typography>
-              {page === "profile" ? (
-                <>
-                  <Typography>
-                    {user.first_name} {user.last_name} · {user.email}
-                  </Typography>
-                  <Button
-                    onClick={() => {
-                      setForm({
-                        first_name: user.first_name,
-                        last_name: user.last_name,
-                        email: user.email,
-                      });
-                      setFields([]);
-                    }}
-                  >
-                    {t("edit")}
-                  </Button>
-                </>
-              ) : page === "dispense" ? (
-                <Button variant="contained" onClick={() => startForm()}>
-                  {t("dispense")}
-                </Button>
-              ) : (
-                <>
-                  <Stack direction={{ xs: "column", sm: "row" }} gap={2}>
-                    <TextField
-                      label={t("search")}
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      sx={{ flexGrow: 1 }}
-                    />
-                    <Button
-                      disabled={busy}
-                      onClick={() => setRevision((x) => x + 1)}
-                    >
-                      {t("refresh")}
-                    </Button>
-                    {staff && resources[page] && (
-                      <Button onClick={() => startForm()}>{t("create")}</Button>
-                    )}
-                  </Stack>
-                  {busy ? (
-                    <Typography role="status">{t("loading")}</Typography>
-                  ) : rows.length === 0 ? (
-                    <Typography>{t("empty")}</Typography>
-                  ) : (
-                    rows.map((row) => (
-                      <Paper key={row.id} sx={{ p: 2 }}>
-                        <Stack spacing={1}>
-                          <Typography variant="h6" component="h2">
-                            {label(row)}
-                          </Typography>
-                          {row.medication_name && (
-                            <Typography>{row.medication_name}</Typography>
-                          )}
-                          {Object.entries(row)
-                            .filter(
-                              ([key]) =>
-                                ![
-                                  "id",
-                                  "user",
-                                  "lines",
-                                  "medication_name",
-                                  "patient_name",
-                                  "name",
-                                  "full_name",
-                                  "reference",
-                                  "pharmacist",
-                                ].includes(key),
-                            )
-                            .map(([key, value]) => (
-                              <Typography key={key} variant="body2">
-                                {t(key)}:{" "}
-                                {key === "dispensed_at"
-                                  ? new Date(String(value)).toLocaleString(
-                                      i18n.language,
-                                    )
-                                  : typeof value === "boolean"
-                                    ? t(value ? "yes" : "no")
-                                    : key === "status"
-                                      ? t(String(value))
-                                      : resources[page]?.find(
-                                            (f) => f.name === key,
-                                          )?.relation
-                                        ? label(
-                                            (
-                                              data[
-                                                resources[page].find(
-                                                  (f) => f.name === key,
-                                                )!.relation!
-                                              ] || []
-                                            ).find((x) => x.id === value) || {
-                                              id: value,
-                                            },
-                                          )
-                                        : String(value ?? "—")}
-                              </Typography>
-                            ))}
-                          {row.patient_name && (
-                            <Typography>
-                              {t("patient")}: {row.patient_name}
-                            </Typography>
-                          )}
-                          {row.lines?.map((line: RecordData) => (
-                            <Typography key={line.id}>
-                              {line.medication_name} ·{" "}
-                              {t("quantity_prescribed")}:{" "}
-                              {line.quantity_prescribed} · {t("remaining")}:{" "}
-                              {line.remaining} · {line.directions}
-                            </Typography>
-                          ))}
-                          {staff && editable.includes(page) && (
-                            <Button onClick={() => startForm(row)}>
-                              {t("edit")}
-                            </Button>
-                          )}
-                        </Stack>
-                      </Paper>
-                    ))
-                  )}
-                </>
-              )}
-              {form && (
-                <Paper sx={{ p: 3 }}>
-                  <Stack
-                    component="form"
-                    spacing={2}
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      if (page === "dispense") setConfirm(true);
-                      else void save();
-                    }}
-                  >
-                    {(resources[page] || []).map((field) =>
-                      input(field, form, (key, value) =>
-                        setForm({
-                          ...form,
-                          [key]: value,
-                          ...(key === "patient"
-                            ? { prescription_line: "" }
-                            : {}),
-                        }),
-                      ),
-                    )}
-                    {page === "prescriptions" && (
-                      <>
-                        {lines.map((line, index) => (
-                          <Box key={index}>
-                            <Stack spacing={2} sx={{ my: 2 }}>
-                              {[
-                                { name: "medication", relation: "medications" },
-                                { name: "quantity_prescribed", type: "number" },
-                                { name: "directions" },
-                              ].map((field) =>
-                                input(field, line, (key, value) =>
-                                  setLines(
-                                    lines.map((l, i) =>
-                                      i === index ? { ...l, [key]: value } : l,
-                                    ),
-                                  ),
-                                ),
-                              )}
-                              <Button
-                                disabled={lines.length === 1}
-                                onClick={() =>
-                                  setLines(lines.filter((_, i) => i !== index))
-                                }
-                              >
-                                {t("remove")}
-                              </Button>
-                            </Stack>
-                          </Box>
-                        ))}
-                        <Button
-                          onClick={() =>
-                            setLines([
-                              ...lines,
-                              {
-                                medication: "",
-                                quantity_prescribed: 1,
-                                directions: "",
-                              },
-                            ])
-                          }
-                        >
-                          {t("addLine")}
-                        </Button>
-                      </>
-                    )}
-                    <Stack direction="row" gap={2}>
-                      <Button variant="contained" type="submit" disabled={busy}>
-                        {t("save")}
-                      </Button>
-                      <Button onClick={() => setForm(null)}>
-                        {t("cancel")}
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </Paper>
-              )}
-            </>
-          )}
-        </Stack>
-      </Container>
-      <Dialog open={confirm} onClose={() => setConfirm(false)}>
-        <DialogTitle>{t("dispense")}</DialogTitle>
-        <DialogContent>{t("confirm")}</DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirm(false)}>{t("cancel")}</Button>
-          <Button disabled={busy} onClick={() => void save()}>
+            <div className="auth-switch">
+              <span>{t(registering ? "alreadyAccount" : "noAccount")}</span>
+              <Button
+                onClick={() => {
+                  setRegistering(!registering);
+                  setMessage("");
+                }}
+              >
+                {t(registering ? "login" : "register")}
+              </Button>
+            </div>
+          </form>
+          <p className="auth-disclaimer">{t("demoNotice")}</p>
+        </section>
+      </div>
+    );
+  const allowed =
+    staff ||
+    ![
+      "medications",
+      "batches",
+      "categories",
+      "suppliers",
+      "doctors",
+      "dispense",
+    ].includes(page);
+  const content =
+    page === "admin" ? (
+      user.role === "Admin" ? (
+        <AdminPanel data={data} onChanged={() => setRevision((x) => x + 1)} />
+      ) : (
+        <div className="access-denied">
+          <Icon name="admin" size={44} />
+          <h1>{t("accessDenied")}</h1>
+          <p>{t("accessDescription")}</p>
+          <Button variant="contained" onClick={() => navigate("/")}>
+            {t("backWorkspace")}
+          </Button>
+        </div>
+      )
+    ) : !allowed ? (
+      <div className="access-denied">
+        <h1>{t("accessDenied")}</h1>
+        <Button onClick={() => navigate("/")}>{t("backWorkspace")}</Button>
+      </div>
+    ) : page === "overview" ? (
+      <Dashboard data={data} user={user} />
+    ) : page === "profile" ? (
+      <>
+        <PageHeader
+          title={t("profile")}
+          description={t("profileDescription")}
+        />
+        <section className="profile-panel">
+          <span className="profile-monogram">
+            {user.username.slice(0, 2).toUpperCase()}
+          </span>
+          <h2>
+            {user.first_name || user.username} {user.last_name}
+          </h2>
+          <span className="role-label">{t(user.role || "unassigned")}</span>
+          <dl>
+            <div>
+              <dt>{t("username")}</dt>
+              <dd>{user.username}</dd>
+            </div>
+            <div>
+              <dt>{t("email")}</dt>
+              <dd>{user.email || "—"}</dd>
+            </div>
+          </dl>
+          <Button
+            variant="contained"
+            startIcon={<Icon name="edit" />}
+            onClick={() =>
+              setForm({ resource: "profile", record: user as RecordData })
+            }
+          >
+            {t("edit")}
+          </Button>
+        </section>
+      </>
+    ) : page === "dispense" ? (
+      <>
+        <PageHeader
+          title={t("dispense")}
+          description={t("dispenseDescription")}
+        />
+        <section className="dispense-intro">
+          <span className="large-icon">
+            <Icon name="medications" size={42} />
+          </span>
+          <h2>{t("dispenseTitle")}</h2>
+          <p>{t("dispenseHint")}</p>
+          <Button
+            variant="contained"
+            startIcon={<Icon name="dispense" />}
+            onClick={() => setForm({ resource: "dispense" })}
+          >
             {t("dispense")}
           </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+        </section>
+      </>
+    ) : endpoints.includes(page) ? (
+      <>
+        <PageHeader
+          title={t(page)}
+          description={t(page + "Description", {
+            defaultValue: t("recordsDescription"),
+          })}
+          action={
+            staff && page !== "dispensings" ? (
+              <Button
+                variant="contained"
+                startIcon={<Icon name="dispense" />}
+                onClick={() => setForm({ resource: page })}
+              >
+                {t("create")}
+              </Button>
+            ) : undefined
+          }
+        />
+        <section className="ledger">
+          <div className="ledger-toolbar">
+            <div>
+              <h2>{t("allRecords")}</h2>
+              <span className="record-count">
+                {rows.length} {t("records")}
+              </span>
+            </div>
+            <div className="ledger-tools">
+              <TextField
+                size="small"
+                label={t("search")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <Button disabled={busy} onClick={() => setRevision((x) => x + 1)}>
+                {t("refresh")}
+              </Button>
+            </div>
+          </div>
+          {busy ? (
+            <div className="loading-state" role="status">
+              {t("loading")}
+            </div>
+          ) : (
+            <RecordList
+              resource={page}
+              rows={rows}
+              data={data}
+              onEdit={
+                staff && editable.includes(page)
+                  ? (record) => setForm({ resource: page, record })
+                  : undefined
+              }
+            />
+          )}
+        </section>
+      </>
+    ) : (
+      <div className="access-denied">
+        <h1>{t("not_found")}</h1>
+        <Button onClick={() => navigate("/")}>{t("backWorkspace")}</Button>
+      </div>
+    );
+  return (
+    <Workspace user={user} page={page} onLogout={() => void logout()}>
+      {message && (
+        <Alert
+          sx={{ mb: 3 }}
+          severity={message === "saved" ? "success" : "error"}
+        >
+          {t(message, { defaultValue: t("error") })}
+        </Alert>
+      )}
+      {content}
+      {form && (
+        <ResourceForm
+          resource={form.resource}
+          record={form.record}
+          data={data}
+          onClose={() => setForm(null)}
+          onSave={save}
+        />
+      )}
+    </Workspace>
   );
 }

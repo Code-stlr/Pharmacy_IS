@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "./i18n";
 import i18n from "./i18n";
 import App from "./App";
+import { MemoryRouter } from "react-router-dom";
 import { messages } from "./locales";
 
 afterEach(() => {
@@ -22,9 +23,16 @@ function loggedOut() {
       ),
   );
 }
+function RoutedApp() {
+  return (
+    <MemoryRouter>
+      <App />
+    </MemoryRouter>
+  );
+}
 test("login screen switches language to Kazakh", async () => {
   loggedOut();
-  render(<App />);
+  render(<RoutedApp />);
   expect(
     await screen.findByRole("button", { name: "Sign in" }),
   ).toBeInTheDocument();
@@ -37,7 +45,7 @@ test("login screen switches language to Kazakh", async () => {
 });
 test("registration shows required patient fields", async () => {
   loggedOut();
-  render(<App />);
+  render(<RoutedApp />);
   fireEvent.click(
     await screen.findByRole("button", { name: "Create patient account" }),
   );
@@ -47,30 +55,28 @@ test("registration shows required patient fields", async () => {
 test("patient navigation excludes inventory and dispensing actions", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockImplementation(async (url: string) => ({
-        ok: true,
-        json: async () =>
-          url.includes("auth/me")
-            ? {
-                id: 1,
-                username: "patient",
-                role: "Patient",
-                first_name: "",
-                last_name: "",
-                email: "",
-              }
-            : [],
-      })),
+    vi.fn().mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.includes("auth/me")
+          ? {
+              id: 1,
+              username: "patient",
+              role: "Patient",
+              first_name: "",
+              last_name: "",
+              email: "",
+            }
+          : [],
+    })),
   );
-  render(<App />);
+  render(<RoutedApp />);
   expect(await screen.findByText("patient · Patient")).toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Dispense" }),
+    screen.queryByRole("link", { name: "Dispense" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Inventory batches" }),
+    screen.queryByRole("link", { name: "Inventory batches" }),
   ).not.toBeInTheDocument();
 });
 test("all dictionaries have identical keys and no empty values", () => {

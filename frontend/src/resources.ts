@@ -3,8 +3,18 @@ export type Field = {
   type?: string;
   relation?: string;
   optional?: boolean;
+  options?: string[];
 };
 export const resources: Record<string, Field[]> = {
+  users: [
+    { name: "username" },
+    { name: "first_name", optional: true },
+    { name: "last_name", optional: true },
+    { name: "email", type: "email", optional: true },
+    { name: "role", options: ["Patient", "Pharmacist", "Admin"] },
+    { name: "is_active", type: "boolean" },
+    { name: "password", type: "password" },
+  ],
   patients: [
     { name: "reference" },
     { name: "full_name" },

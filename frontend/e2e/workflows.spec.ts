@@ -16,9 +16,9 @@ test("patient registration, profile update, isolation and all three languages", 
   await page.getByRole("button", { name: "Create patient account" }).click();
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Inventory batches" }),
+    page.getByRole("link", { name: "Inventory batches" }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "My profile" }).click();
+  await page.getByRole("link", { name: "My profile" }).click();
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.getByLabel("First name").fill("Browser");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -52,16 +52,14 @@ test("pharmacist searches and dispenses OTC with persistent stock update", async
   await page.getByLabel("Password").fill(process.env.DEMO_PASSWORD!);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
-  await page.getByRole("button", { name: "Medications", exact: true }).click();
+  await page.getByRole("link", { name: "Medications", exact: true }).click();
   const before = await (await page.request.get("/api/batches/")).json();
   const otc = before.find(
     (batch: any) => batch.medication_name === "Demo OTC Medicine",
   );
   await page.getByLabel("Search").fill("Demo OTC");
-  await expect(
-    page.getByRole("heading", { name: /Demo OTC Medicine.*5 mg/ }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Dispense", exact: true }).click();
+  await expect(page.getByText(/Demo OTC Medicine.*5 mg/)).toBeVisible();
+  await page.getByRole("link", { name: "Dispense", exact: true }).click();
   await page
     .getByRole("button", { name: "Dispense", exact: true })
     .last()
@@ -82,10 +80,10 @@ test("pharmacist searches and dispenses OTC with persistent stock update", async
     otc.stock_quantity - 1,
   );
   await page
-    .getByRole("button", { name: "Dispensing history", exact: true })
+    .getByRole("link", { name: "Dispensing history", exact: true })
     .click();
   await expect(
-    page.getByText("Demo OTC Medicine", { exact: true }).first(),
+    page.getByRole("row").filter({ hasText: "Demo OTC Medicine" }).first(),
   ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(

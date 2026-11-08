@@ -20,7 +20,7 @@ DATABASES = {"default": {
     "PORT": os.environ.get("POSTGRES_PORT", "5432"),
 }}
 REST_FRAMEWORK = {
-    "DEFAULT_THROTTLE_RATES": {"anon": "10/min"},
+    "DEFAULT_THROTTLE_RATES": {"anon": os.environ.get('AUTH_ANON_RATE', '10/min')},
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],

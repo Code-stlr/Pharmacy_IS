@@ -9,7 +9,8 @@ Prepared 2026-11-08 for Monday 2026-11-09. Stage: **Working System**. Health: **
 - Technical demonstration: create a prescription, dispense, show stock decrement/history, reject excessive quantity, switch roles and languages.
 - Current difficulty: instructor topic approval is not evidenced in this checkout, other members' individual contributions remain unverified, and a group rehearsal has not been observed.
 - Team decision: keep actual completion dates, disclose AI assistance, and require each member to review and improve their owned area next week.
-- Next milestone: Week 11 dedicated protected admin route and eligible-record CRUD, with destructive confirmation and regression tests.
+- Additional completion on 2026-11-08: responsive frontend redesign and Week 11 protected admin route, user/reference CRUD, deletion confirmation and history protection. Full acceptance: 52 tests plus 21 backend subtests.
+- Next milestone: independent member reviews/improvements, team rehearsal and VPS deployment preparation.
 
 ## Individual report
 
@@ -17,15 +18,15 @@ Prepared 2026-11-08 for Monday 2026-11-09. Stage: **Working System**. Health: **
 |---|---|---|---|
 | Ehsan Bali | Requirements and coordination | Approved scope/architecture decisions and AI-assisted implementation/docs under his Git identity | Verify approval, review presentation and record team rehearsal |
 | Garifolla Mukhammed | Database | Role assignment exists; independent authored contribution is not evidenced here | Reviewed schema improvement with own commit and tests |
-| Kaiyzhanov Damir | Application | Role assignment exists; independent authored contribution is not evidenced here | Admin screens on own reviewed branch |
-| Baiyrov Yerassyl | Architecture/security | Role assignment exists; independent authored contribution is not evidenced here | Protected admin APIs with denied-access tests |
-| Daulet Yerdos | Testing/integration | Role assignment exists; independent authored contribution is not evidenced here | Admin acceptance tests and defect evidence |
+| Kaiyzhanov Damir | Application | Role assignment exists; independent authored contribution is not evidenced here | Mobile admin review and one improvement on own branch |
+| Baiyrov Yerassyl | Architecture/security | Role assignment exists; independent authored contribution is not evidenced here | Independent admin security review and one regression improvement |
+| Daulet Yerdos | Testing/integration | Role assignment exists; independent authored contribution is not evidenced here | Execute admin runbook and add one uncovered acceptance case |
 
 Proposed next-task deadline for all members: 2026-11-15 18:00 Asia/Qyzylorda, subject to team agreement. Detailed tasks: week-11.md.
 
 ## Instructor-facing statement
 
-We completed the Week 1–10 application catch-up and prepared its course evidence on November 8. Our local pharmacy MVP demonstrates prescription dispensing, consistent stock and restricted patient access. We can show the source, diagrams and automated/browser evidence. Our next milestone is the dedicated Week 11 admin panel. We still need to confirm topic approval, record each member's own contribution and complete the team rehearsal.
+We completed the Week 1–10 application catch-up and prepared its course evidence on November 8. We subsequently implemented the Week 11 admin panel and redesigned the frontend on the same actual date. Our local pharmacy MVP demonstrates prescription dispensing, consistent stock, restricted patient access and administrator-only user/reference management. We can show source, diagrams and automated/browser evidence. We still need to confirm topic approval, record each member's own contribution, complete the team rehearsal and deploy to a VPS.
 
 ## Preparation checklist
 

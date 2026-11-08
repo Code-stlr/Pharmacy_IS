@@ -42,9 +42,11 @@ export async function api(
       throw new ApiError(
         typeof body.code === "string"
           ? body.code
-          : res.status === 403
-            ? "unauthorized"
-            : "validation",
+          : res.status === 429
+            ? "rateLimited"
+            : res.status === 403
+              ? "unauthorized"
+              : "validation",
         Object.keys(body),
       );
     return body;

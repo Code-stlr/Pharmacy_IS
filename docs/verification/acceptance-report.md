@@ -25,7 +25,7 @@ The verification used the separate `pharmacy-acceptance` Compose project, new Po
 | Artifact review | PASS | All 12 slide previews, exported UML/ERD and 3 wireframes inspected |
 | SQLite preservation | PASS | SHA-256 unchanged: 3B29DE2E27319E161B8222945CF5986839C383CD44D6CDD8DEDBC149DE9F9301 |
 
-Total: **43 tests**, plus 3 backend subtests. This count excludes migration/schema/build checks.
+Baseline total: **43 tests**, plus 3 backend subtests. This count excludes migration/schema/build checks. The subsequent Week 11 result below supersedes this count.
 
 ## Browser scenarios
 
@@ -45,12 +45,22 @@ The accessibility scans found no serious or critical WCAG 2 A/AA violations on t
 
 ## Remaining limitations
 
-- Vite reports a 557 KB JavaScript chunk before gzip. The build succeeds; code splitting is a later performance improvement.
+- Vite reported a 557 KB JavaScript chunk at baseline, approximately 599 KB after the Week 11 redesign. The build succeeds; code splitting is a later performance improvement.
 - No VPS, TLS, backup restore, load test, penetration test or complete clinical safety audit was performed.
-- Dedicated Week 11 admin CRUD is still pending. Automated checks cannot close that requirement.
+- Dedicated Week 11 admin CRUD was subsequently completed and tested as recorded below.
 - Translation review by fluent speakers, instructor topic approval, each student's personal review and the actual group rehearsal remain human actions.
 - Browser tests create fictional records and consume small stock quantities in the acceptance database. Seeds intentionally do not reset them.
 
 ## Demonstration readiness
 
 The tested local workflow is ready for a technical demonstration using demo-runbook.md. Team readiness remains conditional on the personal review/rehearsal and approval items listed above. Screenshots in `screenshots/` are fictional acceptance-run evidence.
+
+## Week 11 extension — 2026-11-08
+
+The complete `scripts/verify.ps1` run returned exit code 0 after the frontend redesign and admin implementation: **40 backend tests plus 21 subtests, 4 frontend tests and 8 Playwright scenarios: 52 tests total**. Django configuration, migration drift, OpenAPI validation, readiness and production TypeScript/Vite build also passed. No schema migration was required. The original SQLite database remained unchanged.
+
+Two additional browser scenarios verify user creation/editing/deletion, cancelling deletion, category CRUD, rejection of referenced-category deletion, all three admin UI languages, administrator accessibility, mobile navigation/Escape and pharmacist denial at both `/admin` and the admin API. Backend tests also exercise every admin resource's denied GET/POST/PATCH/DELETE access, weak passwords, self/superuser protection, linked-account protection and medication deletion rules.
+
+The isolated acceptance backend overrides `AUTH_ANON_RATE` to `1000/min` because repeated browser logins share one loopback IP. Normal local/production configuration retains `10/min`; the override exists only in `docker-compose.acceptance.yml`. Accessibility scans passed without serious/critical violations on the tested login, medication-search and admin states after entrance animation settled. This remains a scoped check, not a complete accessibility audit.
+
+Final desktop (1440×1000) and mobile (390×844) captures report loaded fonts, no page errors and no horizontal overflow. See `week11-design-review.md` and `week11/screenshots/`. Presentation files were left unchanged.

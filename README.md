@@ -10,6 +10,8 @@ Phases 1–6 provide a working React/Django/PostgreSQL MVP: session authenticati
 
 ## Run locally with Docker
 
+Week 11 administration is implemented at `/admin` for Admin accounts, with user/reference CRUD, deletion confirmation and protected clinical history. The frontend now has a responsive sidebar, live overview, searchable ledgers and dialog forms in all three languages. See the [design review and screenshots](docs/verification/week11-design-review.md) and [admin demonstration steps](docs/verification/demo-runbook.md). VPS deployment remains pending; no presentation changes were made for this milestone.
+
 Requires Docker Desktop with Linux containers and Docker Compose.
 
 1. Copy `.env.example` to `.env`.

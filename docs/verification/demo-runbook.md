@@ -22,7 +22,18 @@ Target: 8–10 minutes plus questions. Start at http://localhost:8080, or port 8
 4. Open diagrams, slides and report before the class. Downloaded images and built containers allow a local demonstration.
 5. Every member reviews their code/docs and rehearses their explanation. A technical automated run does not prove that the team has rehearsed.
 
-## Recovery
+## Week 11 admin demonstration (about 4 minutes)
+
+1. Sign in as `admin_demo`. Show the overview's real inventory counts, then open Admin panel.
+2. In Users, create a fictional test user with a strong password and Patient role. Search for it, edit its email and show the saved value.
+3. Select Delete, cancel once and show the record still exists. Confirm deletion of this unlinked test account.
+4. In Categories, create, rename and delete an unused demo category. Attempt to delete the seeded category referenced by medication: the UI must explain that linked history is protected.
+5. Switch English → Kazakh → Russian. At mobile width, open navigation and show the responsive record cards.
+6. Sign out and sign in as `pharmacist_demo`. Admin navigation is absent and direct `/admin` access is denied. Server tests independently prove API denial.
+
+No new slides are needed for this workflow. Do not delete seeded users or patient/clinical history for demonstration. Use the acceptance stack if repeated logins hit the normal 10/minute limit.
+
+## Recovery steps
 
 If login fails, confirm the demo password and check existing credentials rather than rerunning seeds expecting a reset. If the API is unavailable, inspect docker compose logs backend and /api/health/. If a request result is uncertain, inspect history before retrying. Do not delete the real demo volume to repair a presentation. The acceptance stack uses its own volume and can demonstrate a clean environment without touching the main database.
 

@@ -1,5 +1,8 @@
 # Isolated project/volume and alternate loopback port; requires Compose 2.24.4+.
 services:
+  backend:
+    environment:
+      AUTH_ANON_RATE: 1000/min
   frontend:
     ports: !override
       - "127.0.0.1:8181:80"

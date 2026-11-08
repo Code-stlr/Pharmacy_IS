@@ -1,4 +1,5 @@
-export const messages = {
+import { workspaceMessages } from "./workspace-locales";
+const baseMessages = {
   en: {
     title: "Pharmacy IS",
     language: "Language",
@@ -289,4 +290,9 @@ export const messages = {
     not_found: "Жазба табылмады",
     forbidden_fields: "Бұл өрістерді өзгертуге болмайды.",
   },
+};
+export const messages = {
+  en: { ...baseMessages.en, ...workspaceMessages.en },
+  ru: { ...baseMessages.ru, ...workspaceMessages.ru },
+  kk: { ...baseMessages.kk, ...workspaceMessages.kk },
 };
