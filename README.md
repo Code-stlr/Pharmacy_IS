@@ -72,6 +72,7 @@ The script builds a separate acceptance stack on port 8181 and runs backend, fro
 | [Requirements](docs/requirements.md) | Project aim, objectives and acceptance criteria |
 | [AI usage](docs/ai-usage.md) | Assistance disclosure and student verification responsibilities |
 | [Semester plan](semester_mvp_project_plan.md) | Governing weekly course criteria |
+| [Project graph](graphify-out/GRAPH_REPORT.md) | Code/document relationships, graph audit and suggested questions; download [graph.html](graphify-out/graph.html) to open the interactive view in a browser |
 
 ## Contributing
 

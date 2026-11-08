@@ -1,0 +1,204 @@
+{
+  "node_count": 451,
+  "unverified_node_count": 0,
+  "raw_edge_count": 971,
+  "non_object_edges": 0,
+  "missing_endpoint_edges": 0,
+  "dangling_endpoint_edges": 108,
+  "external_reference_edges": 9,
+  "self_loop_edges": 0,
+  "valid_candidate_edges": 854,
+  "exact_duplicate_edges": 0,
+  "directed_unique_endpoint_pairs": 840,
+  "directed_same_endpoint_collapsed_edges": 14,
+  "undirected_unique_endpoint_pairs": 840,
+  "undirected_same_endpoint_collapsed_edges": 14,
+  "same_endpoint_group_count": 14,
+  "relation_variant_groups": 13,
+  "source_file_variant_groups": 0,
+  "source_location_variant_groups": 1,
+  "context_variant_groups": 0,
+  "post_build_graph_type": "Graph",
+  "post_build_node_count": 497,
+  "post_build_edge_count": 957,
+  "post_build_error": "",
+  "producer_suppression": {
+    "path": ".build/graphify-env/Lib/site-packages/graphify/extract.py",
+    "total_sites": 12,
+    "sites": [
+      {
+        "line": 1886,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 2581,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 2583,
+        "name": "seen_doc_refs",
+        "tuple_arity": 0,
+        "sample": "seen_doc_refs: set[str] = set()"
+      },
+      {
+        "line": 3250,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 3397,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n.get(\"id\") for n in nodes}"
+      },
+      {
+        "line": 4811,
+        "name": "seen_keys",
+        "tuple_arity": 0,
+        "sample": "seen_keys: set[tuple] = set()"
+      },
+      {
+        "line": 4997,
+        "name": "seen_keys",
+        "tuple_arity": 0,
+        "sample": "seen_keys: set[tuple] = set()"
+      },
+      {
+        "line": 8958,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 9066,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 9145,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 9670,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 9671,
+        "name": "seen_edges",
+        "tuple_arity": 4,
+        "sample": "seen_edges: set[tuple[str, str, str, str | None]] = set()"
+      }
+    ],
+    "error": ""
+  },
+  "examples": [
+    {
+      "source": "backend_pharmacy_admin_api_adminresourceviewset",
+      "target": "backend_pharmacy_api_resourceviewset",
+      "edge_count": 2,
+      "relations": [
+        "inherits",
+        "uses"
+      ],
+      "source_files": [
+        "backend/pharmacy/admin_api.py"
+      ],
+      "source_locations": [
+        "L123"
+      ],
+      "contexts": [
+        ""
+      ]
+    },
+    {
+      "source": "backend_pharmacy_test_workflows_concurrentdispensingtests_test_simultaneous_otc_requests_cannot_oversell_stock",
+      "target": "backend_pharmacy_test_workflows_concurrentdispensingtests_test_simultaneous_otc_requests_cannot_oversell_stock_attempt",
+      "edge_count": 2,
+      "relations": [
+        "contains",
+        "indirect_call"
+      ],
+      "source_files": [
+        "backend/pharmacy/test_workflows.py"
+      ],
+      "source_locations": [
+        "L170",
+        "L180"
+      ],
+      "contexts": [
+        "",
+        "argument"
+      ]
+    },
+    {
+      "source": "frontend_e2e_admin_spec",
+      "target": "frontend_e2e_admin_spec_signin",
+      "edge_count": 2,
+      "relations": [
+        "calls",
+        "contains"
+      ],
+      "source_files": [
+        "frontend/e2e/admin.spec.ts"
+      ],
+      "source_locations": [
+        "L20",
+        "L4"
+      ],
+      "contexts": [
+        "",
+        "call"
+      ]
+    },
+    {
+      "source": "frontend_src_adminpanel_adminpanel",
+      "target": "frontend_src_adminpanel_adminpanel_changed",
+      "edge_count": 2,
+      "relations": [
+        "calls",
+        "contains"
+      ],
+      "source_files": [
+        "frontend/src/AdminPanel.tsx"
+      ],
+      "source_locations": [
+        "L174",
+        "L51"
+      ],
+      "contexts": [
+        "",
+        "call"
+      ]
+    },
+    {
+      "source": "frontend_src_adminpanel_adminpanel",
+      "target": "frontend_src_adminpanel_adminpanel_remove",
+      "edge_count": 2,
+      "relations": [
+        "calls",
+        "contains"
+      ],
+      "source_files": [
+        "frontend/src/AdminPanel.tsx"
+      ],
+      "source_locations": [
+        "L201",
+        "L56"
+      ],
+      "contexts": [
+        "",
+        "call"
+      ]
+    }
+  ]
+}

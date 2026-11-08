@@ -1,0 +1,15 @@
+{
+  "runs": [
+    {
+      "date": "2026-11-08T18:01:28.705417+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "token_usage_available": false,
+      "files": 78,
+      "note": "Zero counters are unknown placeholders; host collaboration does not expose token usage."
+    }
+  ],
+  "total_input_tokens": 0,
+  "total_output_tokens": 0,
+  "token_totals_complete": false
+}
