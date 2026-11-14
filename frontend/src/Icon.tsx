@@ -30,6 +30,16 @@ export default function Icon({
         <path d="m3 7 9-4 9 4-9 4-9-4Zm0 0v10l9 4 9-4V7M12 11v10M7 5l10 5" />
       </>
     ),
+    stock: (
+      <>
+        <path d="M3 3v18h18M7 15l4-4 3 3 5-6" />
+      </>
+    ),
+    allergies: (
+      <>
+        <path d="M12 3 2 20h20L12 3Zm0 6v5m0 3v.01" />
+      </>
+    ),
     prescriptions: (
       <>
         <path d="M7 3H5v18h14V3h-2M9 3h6v4H9zM8 12h8m-8 4h5" />

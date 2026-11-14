@@ -12,6 +12,15 @@ class Category(models.Model):
         return self.name
 
 
+class Allergy(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    # Substring searched in Medication.active_ingredient to warn/block dispensing, e.g. "penicillin".
+    ingredient_keyword = models.CharField(max_length=120, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Patient(models.Model):
     reference = models.CharField(max_length=32, unique=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
@@ -19,6 +28,7 @@ class Patient(models.Model):
     date_of_birth = models.DateField()
     phone = models.CharField(max_length=32, blank=True)
     allergy_notes = models.TextField(blank=True)
+    allergies = models.ManyToManyField(Allergy, blank=True, related_name="patients")
 
     def clean(self):
         if self.date_of_birth and self.date_of_birth > timezone.localdate():

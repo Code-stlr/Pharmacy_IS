@@ -34,7 +34,11 @@ export default function ResourceForm({
       : Object.fromEntries(
           schema.map((field) => [
             field.name,
-            field.type === "boolean" ? true : field.options?.[0] || "",
+            field.type === "boolean"
+              ? true
+              : field.multiple
+                ? []
+                : field.options?.[0] || "",
           ]),
         ),
   );
@@ -94,7 +98,9 @@ export default function ResourceForm({
         label={t(field.name)}
         required={!optional}
         value={
-          field.type === "boolean"
+          field.multiple
+            ? (form[field.name] ?? [])
+            : field.type === "boolean"
             ? String(form[field.name] ?? true)
             : (form[field.name] ?? "")
         }
@@ -110,6 +116,7 @@ export default function ResourceForm({
         autoComplete={field.name === "password" ? "new-password" : "off"}
         slotProps={{
           inputLabel: { shrink: true },
+          select: field.multiple ? { multiple: true } : undefined,
           htmlInput: {
             min: field.name === "stock_quantity" ? 0 : 1,
             step: field.type === "decimal" ? "0.01" : undefined,
@@ -118,7 +125,9 @@ export default function ResourceForm({
         onChange={(event) =>
           update(
             field.name,
-            field.type === "boolean"
+            field.multiple
+              ? ((event.target.value as unknown) as number[]).map(Number)
+              : field.type === "boolean"
               ? event.target.value === "true"
               : field.options
                 ? event.target.value
@@ -148,9 +157,13 @@ export default function ResourceForm({
                   </MenuItem>
                 ))
               : [
-                  <MenuItem key="none" value="">
-                    {t("none")}
-                  </MenuItem>,
+                  ...(field.multiple
+                    ? []
+                    : [
+                        <MenuItem key="none" value="">
+                          {t("none")}
+                        </MenuItem>,
+                      ]),
                   ...options.map((item) => (
                     <MenuItem key={item.id} value={item.id}>
                       {label(item)}

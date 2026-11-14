@@ -29,6 +29,9 @@ def dispense(*, patient, batch, prescription_line, quantity, pharmacist):
     batch = DrugBatch.objects.select_for_update().select_related("medication").get(pk=batch.pk)
     if not batch.medication.is_active or batch.expires_on <= today or batch.received_on > today:
         fail("invalid_batch")
+    ingredient = batch.medication.active_ingredient.lower()
+    if any(k.lower() in ingredient for k in patient.allergies.exclude(ingredient_keyword="").values_list("ingredient_keyword", flat=True)):
+        fail("allergy_conflict")
     if line and line.medication_id != batch.medication_id:
         fail("medication_mismatch")
     if batch.medication.requires_prescription and not line:

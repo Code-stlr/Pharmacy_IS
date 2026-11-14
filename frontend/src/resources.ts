@@ -3,6 +3,7 @@ export type Field = {
   type?: string;
   relation?: string;
   optional?: boolean;
+  multiple?: boolean;
   options?: string[];
 };
 export const resources: Record<string, Field[]> = {
@@ -20,8 +21,10 @@ export const resources: Record<string, Field[]> = {
     { name: "full_name" },
     { name: "date_of_birth", type: "date" },
     { name: "phone", optional: true },
+    { name: "allergies", relation: "allergies", multiple: true, optional: true },
     { name: "allergy_notes", optional: true },
   ],
+  allergies: [{ name: "name" }, { name: "ingredient_keyword", optional: true }],
   categories: [{ name: "name" }],
   suppliers: [{ name: "name" }, { name: "phone", optional: true }],
   doctors: [{ name: "full_name" }, { name: "license_number" }],

@@ -1,8 +1,10 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from datetime import timedelta
 from django.db.models import Sum
+from django.utils import timezone
 from rest_framework import serializers
-from .models import Category, Supplier, Doctor, Patient, Medication, DrugBatch, Prescription, PrescriptionLine, DispensingTransaction
+from .models import Allergy, Category, Supplier, Doctor, Patient, Medication, DrugBatch, Prescription, PrescriptionLine, DispensingTransaction
 
 
 class ValidatedModelSerializer(serializers.ModelSerializer):
@@ -35,11 +37,27 @@ class DoctorSerializer(ValidatedModelSerializer):
         fields = "__all__"
 
 
+class AllergySerializer(ValidatedModelSerializer):
+    class Meta:
+        model = Allergy
+        fields = "__all__"
+
+
 class PatientSerializer(ValidatedModelSerializer):
+    allergy_names = serializers.SlugRelatedField(source="allergies", many=True, read_only=True, slug_field="name")
+
     class Meta:
         model = Patient
         fields = "__all__"
         read_only_fields = ["user"]
+
+    def validate(self, attrs):
+        # Many-to-many values cannot be assigned directly on the model instance during full_clean().
+        allergies = attrs.pop("allergies", None)
+        super().validate(attrs)
+        if allergies is not None:
+            attrs["allergies"] = allergies
+        return attrs
 
 
 class MedicationSerializer(ValidatedModelSerializer):
@@ -53,6 +71,47 @@ class BatchSerializer(ValidatedModelSerializer):
     class Meta:
         model = DrugBatch
         fields = "__all__"
+
+
+LOW_STOCK_THRESHOLD = 20
+EXPIRY_WARNING_DAYS = 30
+
+
+class StockSerializer(serializers.ModelSerializer):
+    total_stock = serializers.IntegerField(read_only=True)
+    min_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True, allow_null=True)
+    max_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True, allow_null=True)
+    nearest_expiry = serializers.DateField(read_only=True, allow_null=True)
+    stock_value = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    expired_quantity = serializers.IntegerField(read_only=True)
+    batches = serializers.SerializerMethodField()
+    unsafe_for_patient = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Medication
+        fields = ["id", "name", "strength", "dosage_form", "active_ingredient", "requires_prescription",
+                  "total_stock", "min_price", "max_price", "nearest_expiry", "stock_value", "expired_quantity",
+                  "batches", "unsafe_for_patient"]
+
+    def get_batches(self, obj) -> list:
+        today = timezone.localdate()
+        soon = today + timedelta(days=EXPIRY_WARNING_DAYS)
+        result = []
+        for batch in sorted(obj.batches.all(), key=lambda b: b.expires_on):
+            if batch.expires_on <= today:
+                status = "expired"
+            elif batch.stock_quantity == 0:
+                status = "empty"
+            elif batch.expires_on <= soon:
+                status = "expiring"
+            else:
+                status = "ok"
+            result.append({"id": batch.id, "lot_number": batch.lot_number, "stock_quantity": batch.stock_quantity,
+                           "unit_price": str(batch.unit_price), "expires_on": batch.expires_on.isoformat(), "status": status})
+        return result
+
+    def get_unsafe_for_patient(self, obj) -> bool:
+        return any(k.lower() in obj.active_ingredient.lower() for k in self.context.get("allergy_keywords", []) if k)
 
 
 class LineSerializer(ValidatedModelSerializer):

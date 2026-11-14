@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Alert, Button, TextField } from "@mui/material";
+import { Alert, Button, MenuItem, TextField } from "@mui/material";
 import { api, ApiError, type RecordData, type User } from "./api";
 import Workspace, { Brand, LanguageSelect, PageHeader } from "./Workspace";
 import Dashboard from "./Dashboard";
@@ -15,14 +15,17 @@ const endpoints = [
   "patients",
   "medications",
   "batches",
+  "stock",
   "prescriptions",
   "dispensings",
+  "allergies",
   "categories",
   "suppliers",
   "doctors",
 ];
 const editable = [
   "patients",
+  "allergies",
   "medications",
   "categories",
   "suppliers",
@@ -38,7 +41,9 @@ export default function App() {
     [registering, setRegistering] = useState(false);
   const [data, setData] = useState<Record<string, RecordData[]>>({}),
     [rows, setRows] = useState<RecordData[]>([]),
-    [search, setSearch] = useState("");
+    [search, setSearch] = useState(""),
+    [stockPatient, setStockPatient] = useState(""),
+    [stockFilter, setStockFilter] = useState("");
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
     [revision, setRevision] = useState(0);
@@ -60,6 +65,7 @@ export default function App() {
   useEffect(() => {
     setRows([]);
     setSearch("");
+    setStockFilter("");
     setMessage("");
     setForm(null);
   }, [page]);
@@ -86,7 +92,13 @@ export default function App() {
     let active = true;
     const timer = setTimeout(
       () =>
-        api(page + "/?search=" + encodeURIComponent(search))
+        api(
+          page +
+            "/?search=" +
+            encodeURIComponent(search) +
+            (page === "stock" && stockPatient ? "&patient=" + stockPatient : "") +
+            (page === "stock" && stockFilter ? "&filter=" + stockFilter : ""),
+        )
           .then((value) => {
             if (active) setRows(value);
           })
@@ -99,7 +111,7 @@ export default function App() {
       active = false;
       clearTimeout(timer);
     };
-  }, [user?.id, page, search, revision]);
+  }, [user?.id, page, search, stockPatient, stockFilter, revision]);
   function showError(error: unknown) {
     setMessage(error instanceof ApiError ? error.code : "error");
   }
@@ -266,6 +278,8 @@ export default function App() {
     ![
       "medications",
       "batches",
+      "stock",
+      "allergies",
       "categories",
       "suppliers",
       "doctors",
@@ -356,7 +370,7 @@ export default function App() {
             defaultValue: t("recordsDescription"),
           })}
           action={
-            staff && page !== "dispensings" ? (
+            staff && page !== "dispensings" && page !== "stock" ? (
               <Button
                 variant="contained"
                 startIcon={<Icon name="dispense" />}
@@ -374,6 +388,18 @@ export default function App() {
               <span className="record-count">
                 {rows.length} {t("records")}
               </span>
+              {page === "stock" && (
+                <span className="record-count">
+                  {" · "}
+                  {t("totalValue")}:{" "}
+                  {new Intl.NumberFormat(i18n.language, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(
+                    rows.reduce((sum, r) => sum + Number(r.stock_value || 0), 0),
+                  )}
+                </span>
+              )}
             </div>
             <div className="ledger-tools">
               <TextField
@@ -382,6 +408,38 @@ export default function App() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+              {page === "stock" && (
+                <TextField
+                  size="small"
+                  select
+                  label={t("stockFilter")}
+                  value={stockFilter}
+                  onChange={(e) => setStockFilter(e.target.value)}
+                  sx={{ minWidth: 200 }}
+                >
+                  <MenuItem value="">{t("filterAll")}</MenuItem>
+                  <MenuItem value="low">{t("filterLow")}</MenuItem>
+                  <MenuItem value="expiring">{t("filterExpiring")}</MenuItem>
+                  <MenuItem value="expired">{t("filterExpired")}</MenuItem>
+                </TextField>
+              )}
+              {page === "stock" && (
+                <TextField
+                  size="small"
+                  select
+                  label={t("checkAllergiesFor")}
+                  value={stockPatient}
+                  onChange={(e) => setStockPatient(e.target.value)}
+                  sx={{ minWidth: 220 }}
+                >
+                  <MenuItem value="">{t("none")}</MenuItem>
+                  {(data.patients || []).map((p) => (
+                    <MenuItem key={p.id} value={String(p.id)}>
+                      {p.full_name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
               <Button disabled={busy} onClick={() => setRevision((x) => x + 1)}>
                 {t("refresh")}
               </Button>

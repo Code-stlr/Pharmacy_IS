@@ -60,6 +60,7 @@ export default function Workspace({
         "patients",
         "medications",
         "batches",
+        "stock",
         "prescriptions",
         "dispensings",
         "dispense",
@@ -87,7 +88,7 @@ export default function Workspace({
         <>
           <div className="nav-label">{t("referenceData")}</div>
           <nav aria-label={t("referenceData")}>
-            {nav(["categories", "suppliers", "doctors"])}
+            {nav(["allergies", "categories", "suppliers", "doctors"])}
           </nav>
         </>
       )}
