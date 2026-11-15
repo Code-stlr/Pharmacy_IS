@@ -63,8 +63,9 @@ export default function Workspace({
         "prescriptions",
         "dispensings",
         "dispense",
+        "metasearch",
       ]
-    : ["overview", "patients", "prescriptions", "dispensings"];
+    : ["overview", "patients", "prescriptions", "dispensings", "metasearch"];
   const nav = (keys: string[]) =>
     keys.map((key) => (
       <NavLink

@@ -2,6 +2,7 @@ from django.db import connection, DatabaseError
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from pharmacy import api, auth, admin_api
+from search_engine.views import metasearch
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.decorators import api_view, permission_classes
@@ -38,6 +39,7 @@ urlpatterns = [
     path("api/auth/patient/", auth.MyPatientView.as_view()),
     path("api/", include(router.urls)),
     path("api/health/", health),
+    path("api/metasearch/", metasearch),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema")),
 ]

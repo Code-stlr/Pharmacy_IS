@@ -10,6 +10,7 @@ import ResourceForm from "./ResourceForm";
 import AdminPanel from "./AdminPanel";
 import Icon from "./Icon";
 import "./styles.css";
+import Metasearch from "./Metasearch";
 
 const endpoints = [
   "patients",
@@ -348,6 +349,8 @@ export default function App() {
           </Button>
         </section>
       </>
+    ) : page === "metasearch" ? (
+        <Metasearch />
     ) : endpoints.includes(page) ? (
       <>
         <PageHeader
