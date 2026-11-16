@@ -1,0 +1,8 @@
+services:
+  db:
+    profiles: [docker-db]
+  backend:
+    depends_on: !reset {}
+    environment:
+      POSTGRES_HOST: ${PHARMACY_EXTERNAL_DB_HOST:-host.docker.internal}
+      POSTGRES_PORT: ${PHARMACY_EXTERNAL_DB_PORT:-5432}

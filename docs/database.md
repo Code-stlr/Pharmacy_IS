@@ -2,6 +2,19 @@
 
 PostgreSQL is the application database. Schema: `backend/pharmacy/models.py`; executable migrations: `backend/pharmacy/migrations/`. Develop the schema through versioned Django migrations.
 
+## Use Windows PostgreSQL with the Docker app
+
+The default Compose stack runs PostgreSQL in Docker. To use a database running on the Windows host, start PostgreSQL first, create an app-owned database, and set its name, username and password in the local `.env`. The app containers connect through `host.docker.internal` by default. Set `PHARMACY_EXTERNAL_DB_HOST` or `PHARMACY_EXTERNAL_DB_PORT` in `.env` if needed.
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.external-db.yml up --build -d --wait
+curl.exe --fail http://localhost:8081/api/health/
+```
+
+For subsequent plain `docker compose` commands on Windows, set `COMPOSE_FILE=docker-compose.yml;docker-compose.external-db.yml` in `.env`. The override disables the bundled database service unless its profile is explicitly selected. The backend applies pending Django migrations to the configured database at startup.
+
+When replacing an existing database, first save a private `pg_dump` and test its restore to a separate database. Restore the intended snapshot into an empty database. Confirm that Django applies `pharmacy.0002_allergy` if the snapshot predates the allergy catalog, then load any catalog data you need to carry over. Verify the health endpoint, an authenticated workflow and representative record counts before removing the old database. Keep raw dumps outside Git because they can contain patient data and password hashes.
+
 ## Entities and keys
 
 All models have an automatically generated bigint `id` primary key. Foreign keys are indexed by Django. Unique keys cover patient/prescription/dispensing references, doctor licenses, supplier/category names, medication presentations, and medication/lot pairs.
