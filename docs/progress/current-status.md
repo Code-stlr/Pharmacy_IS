@@ -1,4 +1,12 @@
-# Teacher weekly report — beginning of Week 11
+# Pharmacy IS current status
+
+Updated November 16, 2026, at the start of Week 12. Stage is **Working System**. The course evidence remains **At Risk** while topic approval, personal contribution evidence and the team rehearsal are pending. The [central task register](../task-register.md) carries the authoritative status and evidence.
+
+- Since the Week 11 report, Kaiyzhanov Damir added Multiple search, and Baiyrov Yerassyl added the allergy catalog, patient allergy selection and stock overview. Ehsan Bali integrated Yerassyl’s branch and followed up with the sidebar scroll fix and manual catalog additions from the patient form. See SEARCH-01, ALLERGY-01, UI-04 and ALLERGY-02 in the register for commits and checks. The local Docker app runs on port 8081. Live results from the search providers remain unverified.
+- **Week 12, November 16–22.** W12-01 through W12-04 remain open for activity or notifications, upload or reporting, security review and the demonstration inventory of at least six functions. Confirm the previous member-task proposals against actual artifacts before recording completion.
+- **Next week, November 23–29.** The [Week 13 plan](week-13.md) proposes UI consistency and edge-case work, with Multiple search as the emerging-tech polish candidate. Week 14 smoke and offline testing and Week 15 final preparation remain open.
+
+## Historical report at the start of Week 11
 
 Prepared 2026-11-08 for Monday 2026-11-09. Stage: **Working System**. Health: **At Risk** for course evidence requiring human confirmation, while the local technical workflow is demonstrable.
 

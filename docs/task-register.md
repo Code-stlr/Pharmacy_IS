@@ -1,6 +1,6 @@
 # Pharmacy IS — central task register
 
-Updated 2026-11-08. This is the authoritative list of task status, assignment, deadline and completion evidence. [Current status](progress/current-status.md) summarizes it; [weekly records](progress/week-11.md) preserve what was planned and what actually happened. The [requirements](requirements.md) and [semester criteria](../semester_mvp_project_plan.md) govern scope.
+Updated 2026-11-16. This is the authoritative list of task status, assignment, deadline and completion evidence. See [current status](progress/current-status.md), the [Week 11 record](progress/week-11.md), and the [Week 13 plan](progress/week-13.md). The [requirements](requirements.md) and [semester criteria](../semester_mvp_project_plan.md) govern scope.
 
 ## Working rules
 
@@ -16,10 +16,10 @@ Updated 2026-11-08. This is the authoritative list of task status, assignment, d
 
 | Member | Area | Current personal contribution evidence |
 |---|---|---|
-| Ehsan Bali | Requirements, scope, coordination and acceptance | Directed scope/architecture and AI-assisted implementation/docs; commits below. Personal rehearsal/review still pending. |
+| Ehsan Bali | Requirements, scope, coordination and acceptance | Directed scope/architecture and AI-assisted implementation/docs. Integrated the allergy and stock branch and directed the sidebar and allergy-form follow-ups. Personal rehearsal/review still pending. |
 | Garifolla Mukhammed | Database, migrations, constraints and ERD | Independent contribution not yet evidenced in this checkout |
-| Kaiyzhanov Damir | Frontend, forms, responsiveness and localization | Independent contribution not yet evidenced in this checkout |
-| Baiyrov Yerassyl | API architecture, security and deployment | Independent contribution not yet evidenced in this checkout |
+| Kaiyzhanov Damir | Frontend, forms, responsiveness and localization | Implemented Multiple search in `3ca6271` (SEARCH-01). |
+| Baiyrov Yerassyl | API architecture, security and deployment | Implemented the allergy catalog, patient allergy selection and stock overview in `eb51557` (ALLERGY-01). Independent security review still pending. |
 | Daulet Yerdos | Testing, integration, defects and demonstration | Independent contribution not yet evidenced in this checkout |
 
 ## Completed technical baseline
@@ -40,6 +40,17 @@ All rows below completed **2026-11-08** by **Ehsan-directed, Codex-assisted work
 | ADMIN-01 | Protected admin route, user/reference CRUD, confirmation and history protection | Week 11 | Done | `a0c9548`; admin API/browser tests; [admin guide](application.md#admin-panel) |
 | UI-02 | Responsive workspace redesign, real overview and reviewed screenshots | Frontend improvement | Done | `a0c9548`; [frontend source](../frontend/src/Dashboard.tsx); detailed visual review retained privately |
 | REVIEW-01 | Review all milestone work for main integration and rerun full acceptance | Repository integration | Done | Reviewed baseline `63c4572`; merge commit `803debe`; detailed integration review retained privately; Codex review under Ehsan's direction, not independent teammate review |
+
+## November 15–16 updates
+
+Dates below reflect the feature commits and integration. Contributor names are confirmed by Ehsan. Technical verification was performed by Codex under Ehsan's direction. Independent review and instructor acceptance have yet to be recorded.
+
+| ID | Delivered task | Date and contributor | Status | Evidence and remaining checks |
+|---|---|---|---|---|
+| SEARCH-01 | Add Multiple search using Google via SerpAPI, Tavily and Exa. Move the local Compose app to port 8081. | Nov 16, Kaiyzhanov Damir | Done | [Commit `3ca6271`](https://github.com/Code-stlr/Pharmacy_IS/commit/3ca6271). Django check, mocked route and frontend build/tests passed. All three key settings loaded after the rebuild. Live provider results remain unverified. The internal record search is tracked under UI-01. |
+| ALLERGY-01 | Add the allergy catalog, patient allergy selection, ingredient-keyword dispensing check and stock overview with filters and patient allergy flags. | Nov 15, Baiyrov Yerassyl. Nov 16 integration by Ehsan Bali. | Done | [Feature `eb51557`](https://github.com/Code-stlr/Pharmacy_IS/commit/eb51557) and [merge `a2fd0a7`](https://github.com/Code-stlr/Pharmacy_IS/commit/a2fd0a7). 44 backend tests and 21 subtests passed on temporary PostgreSQL. Frontend build and four tests passed. Local migration `0002_allergy` applied. Stock and allergy APIs returned HTTP 200. |
+| UI-04 | Make the sidebar independently scrollable at 100% zoom and in the mobile drawer. | Nov 16, Ehsan-directed, Codex-assisted | Done | [Commit `c247a5d`](https://github.com/Code-stlr/Pharmacy_IS/commit/c247a5d). Browser smoke check reached the Admin panel by wheel and keyboard on desktop and by scrolling the mobile drawer. |
+| ALLERGY-02 | Extend Yerassyl’s allergy selection so staff can add a missing catalog allergy from the patient form, retain the draft and existing selections, and select the new entry. Explain how free-text notes and ingredient keywords affect checking. | Nov 16, Ehsan Bali, Codex-assisted follow-up | Done | [Commit `5a0ed5c`](https://github.com/Code-stlr/Pharmacy_IS/commit/5a0ed5c). Browser smoke check covered cancel, draft retention and patient save payload with mocked APIs. A rolled-back API check returned 201 for administrator and pharmacist and 403 for patient. |
 
 ## Next member tasks — proposed, awaiting team agreement
 
@@ -66,7 +77,7 @@ Owners here are proposed coordinators within their stable areas, not evidence th
 | W12-02 | Damir; Yerassyl supports API | Week 12 | Agree and implement one file-upload or export/reporting workflow with permissions, validation and demonstrable output | Planned | Choose useful scope; CSV export is an option, not an approved decision |
 | W12-03 | Yerassyl | Week 12 | Record a security review of password handling, authorization, input handling and XSS/SQL-injection boundaries; resolve findings and attach tests | Planned | Existing safeguards are baseline evidence, not a completed independent review |
 | W12-04 | Ehsan; Yerdos verifies | Week 12 | Publish a feature inventory mapping more than five distinct working functions to demo steps/evidence | Planned | Include W12-01–03 results and existing functions |
-| W13-01 | Damir; Yerdos verifies | Week 13 | Review UI/error consistency, empty/duplicate/invalid input and network failures; record and fix observed gaps | Planned | Existing redesign/tests cover part of this; week-specific review still needed |
+| W13-01 | Damir; Yerdos verifies | Week 13 | Review UI/error consistency, empty/duplicate/invalid input and network failures; record and fix observed gaps | Planned | [Week 13 plan](progress/week-13.md) proposes owners, checkpoints and acceptance cases. |
 | DEPLOY-01 | Yerassyl | Roadmap phase 9 | Deploy to agreed hosting with domain/TLS, secure settings/secrets and verified live health/auth/admin/dispensing workflows | Planned | Hosting/access/domain choice and deployment plan needed |
 | OPS-01 | Garifolla; Yerassyl supports | Deployment | Document database backup and successfully restore to an isolated environment; verify representative records/workflows | Planned | Agree target environment and backup procedure |
 | W14-01 | Yerdos | Week 14 | Execute full user-journey smoke tests and a genuinely internet-disconnected demo using preloaded dependencies/seeds | Planned | Current public-request-blocking simulation does not prove physical disconnection |
@@ -88,6 +99,8 @@ Owners here are proposed coordinators within their stable areas, not evidence th
 When finishing an open task, update its row and add its result below or link a dated weekly entry containing: **ID; actual contributor(s); actual completion date; branch/commit; observable result; test/demo evidence; reviewer and review outcome; remaining limits**. Do not mark independent review complete without naming the person who actually performed it. If scope, status or deadline changes, record the reason in the weekly record.
 
 ## Register history
+
+- 2026-11-16: Logged November 15–16 Git and verification evidence under SEARCH-01, ALLERGY-01, UI-04 and ALLERGY-02. Added the Week 13 plan. The November 15 member-task deadline remains a historical proposal pending team confirmation of results.
 
 - 2026-11-08: Ehsan clarified the public boundary: restored this register, progress folder, requirements, AI disclosure and semester plan for shared Git tracking. Presentations and detailed internal evidence stay private. Public links now point to available source/tests; private evidence is identified without requiring a private file to navigate the register. This supersedes the earlier local-only tracking arrangement below.
 
