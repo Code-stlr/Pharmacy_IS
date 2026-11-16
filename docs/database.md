@@ -61,6 +61,6 @@ docker compose exec backend python manage.py seed_demo
 docker compose exec backend python -m pytest -p no:cacheprovider
 ```
 
-`seed_demo` is atomic and repeatable: it creates missing fictional records without resetting existing stock, changing prescriptions, or creating login credentials. Dates are relative to the first run and are not extended on rerun. It does not insert dispensing events; use the transactional workflow.
+`seed_demo` is atomic and repeatable. The default seed creates a small set of fictional records for acceptance tests. Run `seed_demo --full` for a fresh demo database with 104 patients, 103 prescriptions, 102 dispensing events, 27 medications, 106 stock batches, and five allergy catalog entries. The full seed uses the normal dispensing workflow and an inactive, unusable history account. Dates are relative to the first run. Re-running the command preserves existing records, stock, and passwords. Use `create_demo_users` with a local `DEMO_PASSWORD` to create sign-in accounts.
 
 Authentication uses Django's User model and Groups (Admin, Pharmacist, Patient), with an optional patient profile relationship. The admin API also prevents deletion of linked patient accounts and protects the current administrator and superusers.
