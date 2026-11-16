@@ -10,7 +10,7 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
-import { ApiError, type RecordData } from "./api";
+import { api, ApiError, type RecordData } from "./api";
 import { resources, type Field } from "./resources";
 
 export default function ResourceForm({
@@ -19,12 +19,14 @@ export default function ResourceForm({
   data,
   onClose,
   onSave,
+  onAllergyAdded,
 }: {
   resource: string;
   record?: RecordData;
   data: Record<string, RecordData[]>;
   onClose: () => void;
   onSave: (values: Record<string, any>) => Promise<void>;
+  onAllergyAdded?: () => void;
 }) {
   const { t } = useTranslation();
   const schema = resources[resource] || [];
@@ -45,6 +47,8 @@ export default function ResourceForm({
   const [lines, setLines] = useState<Record<string, any>[]>([
     { medication: "", quantity_prescribed: 1, directions: "" },
   ]);
+  const [addingAllergy, setAddingAllergy] = useState(false);
+  const [addedAllergies, setAddedAllergies] = useState<RecordData[]>([]);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [errorFields, setErrorFields] = useState<string[]>([]),
@@ -82,10 +86,14 @@ export default function ResourceForm({
     form: Record<string, any>,
     update: (key: string, value: any) => void,
   ) {
-    const options =
-      field.relation === "lines"
-        ? lineOptions
-        : data[field.relation || ""] || [];
+    const related = data[field.relation || ""] || [];
+    let options = field.relation === "lines" ? lineOptions : related;
+    if (field.relation === "allergies") {
+      options = [
+        ...related,
+        ...addedAllergies.filter((item) => !related.some((existing) => existing.id === item.id)),
+      ];
+    }
     const select = Boolean(
       field.relation || field.options || field.type === "boolean",
     );
@@ -113,6 +121,13 @@ export default function ResourceForm({
               : field.type || "text"
         }
         error={errorFields.includes(field.name)}
+        helperText={
+          field.name === "allergy_notes"
+            ? t("allergyNotesHelp")
+            : resource === "allergies" && field.name === "ingredient_keyword"
+              ? t("allergyKeywordHelp")
+              : undefined
+        }
         autoComplete={field.name === "password" ? "new-password" : "off"}
         slotProps={{
           inputLabel: { shrink: true },
@@ -177,6 +192,15 @@ export default function ResourceForm({
       </TextField>
     );
   }
+  async function addAllergy(draft: Record<string, any>) {
+    const allergy: RecordData = await api("allergies/", "POST", draft);
+    setAddedAllergies((current) => [...current, allergy]);
+    setValues((current) => ({
+      ...current,
+      allergies: [...(current.allergies ?? []), allergy.id],
+    }));
+    onAllergyAdded?.();
+  }
   async function submit() {
     setBusy(true);
     setError("");
@@ -226,15 +250,24 @@ export default function ResourceForm({
             </Alert>
           )}
           <div className="form-grid">
-            {schema.map((f) =>
-              field(f, values, (key, value) =>
+            {schema.map((f) => {
+              const control = field(f, values, (key, value) =>
                 setValues({
                   ...values,
                   [key]: value,
                   ...(key === "patient" ? { prescription_line: "" } : {}),
                 }),
-              ),
-            )}
+              );
+              if (resource !== "patients" || f.name !== "allergies") return control;
+              return (
+                <div key={f.name}>
+                  {control}
+                  <Button onClick={() => setAddingAllergy(true)} disabled={busy}>
+                    {t("addCatalogAllergy")}
+                  </Button>
+                </div>
+              );
+            })}
           </div>
           {resource === "prescriptions" && (
             <div className="prescription-editor">
@@ -290,6 +323,14 @@ export default function ResourceForm({
           </Button>
         </DialogActions>
       </Dialog>
+      {addingAllergy && (
+        <ResourceForm
+          resource="allergies"
+          data={data}
+          onClose={() => setAddingAllergy(false)}
+          onSave={addAllergy}
+        />
+      )}
       <Dialog
         open={confirm}
         onClose={busy ? undefined : () => setConfirm(false)}

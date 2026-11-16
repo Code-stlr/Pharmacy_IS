@@ -165,6 +165,7 @@ export default function AdminPanel({
           record={form.record}
           data={data}
           onClose={() => setForm(null)}
+          onAllergyAdded={onChanged}
           onSave={async (values) => {
             await api(
               "admin/" + tab + "/" + (form.record ? form.record.id + "/" : ""),

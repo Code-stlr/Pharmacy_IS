@@ -490,6 +490,7 @@ export default function App() {
           data={data}
           onClose={() => setForm(null)}
           onSave={save}
+          onAllergyAdded={() => setRevision((x) => x + 1)}
         />
       )}
     </Workspace>
