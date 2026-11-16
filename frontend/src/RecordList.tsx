@@ -3,7 +3,18 @@ import { Button, Chip } from "@mui/material";
 import type { RecordData } from "./api";
 import Icon from "./Icon";
 const columns: Record<string, string[]> = {
-  patients: ["full_name", "reference", "date_of_birth", "phone"],
+  patients: ["full_name", "reference", "date_of_birth", "phone", "allergy_names"],
+  allergies: ["name", "ingredient_keyword"],
+  stock: [
+    "name",
+    "total_stock",
+    "min_price",
+    "max_price",
+    "nearest_expiry",
+    "stock_value",
+    "expired_quantity",
+    "unsafe_for_patient",
+  ],
   medications: [
     "name",
     "strength",
@@ -50,6 +61,37 @@ export default function RecordList({
     const v = row[key];
     if (key === "category")
       return (data.categories || []).find((item) => item.id === v)?.name || "—";
+    if (key === "allergy_names")
+      return Array.isArray(v) && v.length ? v.join(", ") : "—";
+    if (key === "total_stock")
+      return (
+        <Chip
+          size="small"
+          color={v === 0 ? "error" : v < 20 ? "warning" : "success"}
+          label={String(v)}
+        />
+      );
+    if (key === "nearest_expiry" && v) {
+      const days = Math.ceil((new Date(v).getTime() - Date.now()) / 86400000);
+      return (
+        <span className={days <= 30 ? "boolean-state muted" : undefined}>
+          {v}
+          {days <= 30 ? " · " + t("expiringSoon") : ""}
+        </span>
+      );
+    }
+    if (key === "expired_quantity")
+      return v > 0 ? (
+        <Chip size="small" color="error" label={String(v)} />
+      ) : (
+        "—"
+      );
+    if (key === "unsafe_for_patient")
+      return v ? (
+        <Chip size="small" color="error" label={t("allergyWarning")} />
+      ) : (
+        "—"
+      );
     if (key === "status" || key === "role")
       return (
         <Chip
@@ -64,11 +106,16 @@ export default function RecordList({
           {t(v ? "yes" : "no")}
         </span>
       );
-    if (key === "unit_price")
+    if (key === "unit_price" ||
+      key === "min_price" ||
+      key === "max_price" ||
+      key === "stock_value") {
+      if (v === null || v === undefined) return "—";
       return new Intl.NumberFormat(i18n.language, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }).format(Number(v));
+    }
     if (key === "dispensed_at")
       return new Date(v).toLocaleString(i18n.language, {
         month: "short",
@@ -154,6 +201,38 @@ export default function RecordList({
                     </div>
                   )}
                 </div>
+                {resource === "stock" && Array.isArray(row.batches) && (
+                  <details className="line-details">
+                    <summary>
+                      {t("details")} · {row.batches.length} {t("batches")}
+                    </summary>
+                    <div>
+                      {row.batches.length === 0 && <p>—</p>}
+                      {row.batches.map((b: RecordData) => (
+                        <p key={b.id}>
+                          <strong>{b.lot_number}</strong> · {t("stock_quantity")}:{" "}
+                          {b.stock_quantity} · {t("unit_price")}:{" "}
+                          {new Intl.NumberFormat(i18n.language, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }).format(Number(b.unit_price))}{" "}
+                          · {t("expires_on")}: {b.expires_on}{" "}
+                          <Chip
+                            size="small"
+                            color={
+                              b.status === "ok"
+                                ? "success"
+                                : b.status === "expiring"
+                                  ? "warning"
+                                  : "error"
+                            }
+                            label={t("batchStatus_" + b.status)}
+                          />
+                        </p>
+                      ))}
+                    </div>
+                  </details>
+                )}
                 {row.lines && (
                   <details className="line-details">
                     <summary>

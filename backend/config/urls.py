@@ -24,8 +24,9 @@ def health(request):
 
 
 router = DefaultRouter()
-for prefix, view in [("patients", api.PatientViewSet), ("categories", api.CategoryViewSet), ("suppliers", api.SupplierViewSet), ("doctors", api.DoctorViewSet), ("medications", api.MedicationViewSet), ("batches", api.BatchViewSet), ("prescriptions", api.PrescriptionViewSet), ("dispensings", api.DispensingViewSet)]:
+for prefix, view in [("patients", api.PatientViewSet), ("allergies", api.AllergyViewSet), ("categories", api.CategoryViewSet), ("suppliers", api.SupplierViewSet), ("doctors", api.DoctorViewSet), ("medications", api.MedicationViewSet), ("batches", api.BatchViewSet), ("prescriptions", api.PrescriptionViewSet), ("dispensings", api.DispensingViewSet)]:
     router.register(prefix, view)
+router.register("stock", api.StockViewSet, basename="stock")
 
 for prefix, view in [('users', admin_api.AdminUserViewSet), ('categories', admin_api.AdminCategoryViewSet), ('suppliers', admin_api.AdminSupplierViewSet), ('doctors', admin_api.AdminDoctorViewSet), ('medications', admin_api.AdminMedicationViewSet), ('patients', admin_api.AdminPatientViewSet)]:
     router.register('admin/' + prefix, view, basename='admin-' + prefix)

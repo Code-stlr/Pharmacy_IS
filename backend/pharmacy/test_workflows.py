@@ -203,3 +203,54 @@ class ConcurrentDispensingTests(TransactionTestCase):
         batch.refresh_from_db()
         self.assertEqual(batch.stock_quantity,85)
         self.assertEqual(DispensingTransaction.objects.count(),1)
+
+
+class AllergyAndStockTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        call_command('seed_demo', stdout=StringIO())
+        self.staff = get_user_model().objects.create_user(username='staff2', password='Strong-test-5938!')
+        self.staff.groups.add(Group.objects.get_or_create(name='Pharmacist')[0])
+        self.patient = Patient.objects.get(reference='DEMO-P001')
+        self.client = APIClient()
+        self.client.force_authenticate(self.staff)
+
+    def test_patient_can_have_several_allergies_selected_from_list(self):
+        from .models import Allergy
+        ids = list(Allergy.objects.values_list('pk', flat=True)[:2])
+        response = self.client.patch(f'/api/patients/{self.patient.pk}/', {'allergies': ids}, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(sorted(response.json()['allergies']), sorted(ids))
+        self.assertEqual(len(response.json()['allergy_names']), 2)
+
+    def test_stock_summary_excludes_expired_batches(self):
+        batch = DrugBatch.objects.get(medication__requires_prescription=False)
+        DrugBatch.objects.filter(pk=batch.pk).update(expires_on=timezone.localdate() - timedelta(days=1), received_on=timezone.localdate() - timedelta(days=30))
+        rows = {row['id']: row for row in self.client.get('/api/stock/').json()}
+        self.assertEqual(rows[batch.medication_id]['total_stock'], 0)
+        self.assertIsNone(rows[batch.medication_id]['nearest_expiry'])
+
+    def test_dispensing_blocked_for_allergic_patient(self):
+        from .models import Allergy
+        batch = DrugBatch.objects.get(medication__requires_prescription=False)
+        allergy = Allergy.objects.create(name='Fictional B', ingredient_keyword='ingredient B')
+        self.patient.allergies.add(allergy)
+        stock = self.client.get(f'/api/stock/?patient={self.patient.pk}').json()
+        self.assertTrue(next(r for r in stock if r['id'] == batch.medication_id)['unsafe_for_patient'])
+        with self.assertRaises(ValidationError):
+            dispense(patient=self.patient, batch=batch, prescription_line=None, quantity=1, pharmacist=self.staff)
+
+    def test_stock_filters_batches_and_value(self):
+        today = timezone.localdate()
+        otc = DrugBatch.objects.get(medication__requires_prescription=False)
+        rx = DrugBatch.objects.get(medication__requires_prescription=True)
+        DrugBatch.objects.filter(pk=otc.pk).update(expires_on=today - timedelta(days=1), received_on=today - timedelta(days=30))
+        DrugBatch.objects.filter(pk=rx.pk).update(stock_quantity=5)
+        expired = {r['id']: r for r in self.client.get('/api/stock/?filter=expired').json()}
+        self.assertIn(otc.medication_id, expired)
+        self.assertEqual(expired[otc.medication_id]['expired_quantity'], 100)
+        self.assertEqual(expired[otc.medication_id]['batches'][0]['status'], 'expired')
+        low = {r['id']: r for r in self.client.get('/api/stock/?filter=low').json()}
+        self.assertIn(rx.medication_id, low)
+        self.assertEqual(low[rx.medication_id]['stock_value'], '125.00')  # 5 x 25.00
+        self.assertEqual(low[rx.medication_id]['batches'][0]['status'], 'ok')

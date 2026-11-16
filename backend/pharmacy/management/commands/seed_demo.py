@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
-from pharmacy.models import Category, Patient, Doctor, Supplier, Medication, DrugBatch, Prescription, PrescriptionLine
+from pharmacy.models import Allergy, Category, Patient, Doctor, Supplier, Medication, DrugBatch, Prescription, PrescriptionLine
 
 
 class Command(BaseCommand):
@@ -14,6 +14,8 @@ class Command(BaseCommand):
         today = timezone.localdate()
         category, _ = Category.objects.get_or_create(name="Demo medicines")
         patient, _ = Patient.objects.get_or_create(reference="DEMO-P001", defaults={"full_name": "Demo Patient One", "date_of_birth": date(2000, 1, 1), "allergy_notes": ""})
+        for name, keyword in [("Penicillin", "penicillin"), ("Aspirin", "acetylsalicylic"), ("Ibuprofen", "ibuprofen"), ("Lactose", "lactose"), ("Sulfonamides", "sulfa")]:
+            Allergy.objects.get_or_create(name=name, defaults={"ingredient_keyword": keyword})
         doctor, _ = Doctor.objects.get_or_create(license_number="DEMO-DOCTOR-001", defaults={"full_name": "Demo Doctor"})
         supplier, _ = Supplier.objects.get_or_create(name="Demo Supplier")
         medication, _ = Medication.objects.get_or_create(name="Demo Prescription Medicine", strength="10 mg", dosage_form="tablet", defaults={"category": category, "active_ingredient": "Fictional ingredient A", "unit": "tablet", "requires_prescription": True})
