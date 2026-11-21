@@ -232,6 +232,28 @@ h3 {
   align-items: center;
   gap: 22px;
 }
+.branch-context {
+  min-width: 0;
+  max-width: 180px;
+}
+.branch-name,
+.branch-switch span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-name,
+.branch-switch.MuiButton-root {
+  color: var(--forest);
+  font-size: 12px;
+  font-weight: 650;
+}
+.branch-switch.MuiButton-root {
+  gap: 6px;
+  max-width: 100%;
+  min-height: 44px;
+  text-transform: none;
+}
 .today {
   font-size: 11px;
   color: var(--muted);
@@ -1178,6 +1200,17 @@ h3 {
   }
   .topbar-right {
     gap: 10px;
+  }
+  .branch-context {
+    max-width: 110px;
+  }
+  .topbar:has(.branch-context) .breadcrumb {
+    min-width: 0;
+  }
+  .topbar:has(.branch-context) .breadcrumb strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .today,
   .avatar {

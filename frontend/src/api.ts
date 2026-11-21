@@ -1,4 +1,5 @@
 export type RecordData = { id: number; [key: string]: any };
+export type Branch = { id: number; code: string; name: string; is_active: boolean };
 export type User = {
   id: number;
   username: string;
@@ -6,6 +7,7 @@ export type User = {
   first_name: string;
   last_name: string;
   email: string;
+  active_branch: Branch | null;
 };
 export class ApiError extends Error {
   constructor(
@@ -19,10 +21,12 @@ export async function api(
   path: string,
   method = "GET",
   data?: unknown,
+  branchId?: number,
 ): Promise<any> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  if (branchId !== undefined) headers["X-Pharmacy-Branch"] = String(branchId);
   try {
     if (method !== "GET") {
       const res = await fetch("/api/auth/csrf/", {

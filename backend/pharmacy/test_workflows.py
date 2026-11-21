@@ -1,6 +1,7 @@
 from datetime import timedelta
 from io import StringIO
 from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.cache import cache
@@ -10,7 +11,7 @@ from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework.exceptions import ValidationError
-from .models import Patient, DrugBatch, PrescriptionLine, Prescription, DispensingTransaction
+from .models import Branch, Patient, DrugBatch, PrescriptionLine, Prescription, DispensingTransaction, UserBranch
 from .services import dispense
 
 
@@ -20,6 +21,7 @@ class WorkflowTests(TestCase):
         call_command('seed_demo', stdout=StringIO())
         self.staff = get_user_model().objects.create_user(username='staff', password='Strong-test-5938!')
         self.staff.groups.add(Group.objects.get_or_create(name='Pharmacist')[0])
+        UserBranch.objects.create(user=self.staff, branch=Branch.objects.get(code="MAIN"))
         self.user = get_user_model().objects.create_user(username='patient', password='Strong-test-5938!')
         self.user.groups.add(Group.objects.get_or_create(name='Patient')[0])
         self.patient = Patient.objects.get(reference='DEMO-P001')
@@ -170,7 +172,7 @@ class ConcurrentDispensingTests(TransactionTestCase):
         def attempt(_):
             close_old_connections()
             try:
-                dispense(patient=patient,batch=batch,prescription_line=None,quantity=75,pharmacist=user)
+                dispense(patient=patient,batch=batch,prescription_line=None,quantity=75,pharmacist=user,branch=batch.branch)
                 return 'ok'
             except ValidationError:
                 return 'rejected'
@@ -182,26 +184,37 @@ class ConcurrentDispensingTests(TransactionTestCase):
         batch.refresh_from_db()
         self.assertEqual(batch.stock_quantity,25)
 
-    def test_simultaneous_requests_cannot_exceed_prescribed_quantity(self):
+    def test_simultaneous_requests_from_different_branches_share_prescribed_quantity(self):
         call_command('seed_demo',stdout=StringIO())
         user=get_user_model().objects.create_user(username='concurrent')
         patient=Patient.objects.get()
         batch=DrugBatch.objects.get(medication__requires_prescription=True)
+        second_branch = Branch.objects.create(code="EAST", name="East Branch")
+        second_batch = DrugBatch.objects.create(
+            branch=second_branch, medication=batch.medication, supplier=batch.supplier,
+            lot_number=batch.lot_number, received_on=batch.received_on, expires_on=batch.expires_on,
+            stock_quantity=batch.stock_quantity, unit_price=batch.unit_price,
+        )
         line=PrescriptionLine.objects.get()
-        def attempt(_):
+        start = Barrier(2)
+
+        def attempt(local_batch):
             close_old_connections()
             try:
-                dispense(patient=patient,batch=batch,prescription_line=line,quantity=15,pharmacist=user)
+                start.wait(timeout=10)
+                dispense(patient=patient, batch=local_batch, prescription_line=line, quantity=15,
+                         pharmacist=user, branch=local_batch.branch)
                 return 'ok'
-            except ValidationError:
-                return 'rejected'
+            except ValidationError as error:
+                return str(error.detail["code"])
             finally:
                 close_old_connections()
         with ThreadPoolExecutor(max_workers=2) as pool:
-            results=list(pool.map(attempt,range(2)))
-        self.assertCountEqual(results,['ok','rejected'])
+            results = list(pool.map(attempt, [batch, second_batch]))
+        self.assertCountEqual(results, ['ok', 'prescription_limit'])
         batch.refresh_from_db()
-        self.assertEqual(batch.stock_quantity,85)
+        second_batch.refresh_from_db()
+        self.assertCountEqual([batch.stock_quantity, second_batch.stock_quantity], [85, 100])
         self.assertEqual(DispensingTransaction.objects.count(),1)
 
 
@@ -211,6 +224,7 @@ class AllergyAndStockTests(TestCase):
         call_command('seed_demo', stdout=StringIO())
         self.staff = get_user_model().objects.create_user(username='staff2', password='Strong-test-5938!')
         self.staff.groups.add(Group.objects.get_or_create(name='Pharmacist')[0])
+        UserBranch.objects.create(user=self.staff, branch=Branch.objects.get(code="MAIN"))
         self.patient = Patient.objects.get(reference='DEMO-P001')
         self.client = APIClient()
         self.client.force_authenticate(self.staff)
@@ -238,7 +252,7 @@ class AllergyAndStockTests(TestCase):
         stock = self.client.get(f'/api/stock/?patient={self.patient.pk}').json()
         self.assertTrue(next(r for r in stock if r['id'] == batch.medication_id)['unsafe_for_patient'])
         with self.assertRaises(ValidationError):
-            dispense(patient=self.patient, batch=batch, prescription_line=None, quantity=1, pharmacist=self.staff)
+            dispense(patient=self.patient, batch=batch, prescription_line=None, quantity=1, pharmacist=self.staff, branch=batch.branch)
 
     def test_stock_filters_batches_and_value(self):
         today = timezone.localdate()

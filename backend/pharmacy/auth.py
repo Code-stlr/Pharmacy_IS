@@ -9,18 +9,24 @@ from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.throttling import AnonRateThrottle
 from drf_spectacular.utils import extend_schema
-from .api import role
-from .models import Patient
-from .serializers import PatientSerializer
+from .branches import account_branch, default_branch, role
+from .models import Branch, Patient
+from .serializers import BranchSerializer, PatientSerializer
 
 
-def identity(user):
-    return {"id": user.pk, "username": user.username, "first_name": user.first_name, "last_name": user.last_name, "email": user.email, "role": role(user)}
+def identity(request, user):
+    current_role = role(user)
+    branch = account_branch(request, user, current_role)
+    return {
+        "id": user.pk, "username": user.username, "first_name": user.first_name, "last_name": user.last_name,
+        "email": user.email, "role": current_role, "active_branch": BranchSerializer(branch).data if branch else None,
+    }
 
 
 def csrf(request):
@@ -35,6 +41,7 @@ class Credentials(serializers.Serializer):
 class Registration(Credentials):
     full_name = serializers.CharField(max_length=200)
     date_of_birth = serializers.DateField()
+    preferred_branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.filter(is_active=True), required=False, allow_null=True)
 
 
 class IdentitySerializer(serializers.Serializer):
@@ -44,6 +51,7 @@ class IdentitySerializer(serializers.Serializer):
     last_name = serializers.CharField()
     email = serializers.EmailField()
     role = serializers.CharField(allow_null=True)
+    active_branch = BranchSerializer(allow_null=True)
 
 
 class ProfileSerializer(serializers.Serializer):
@@ -54,6 +62,10 @@ class ProfileSerializer(serializers.Serializer):
 
 class PhoneSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=32, allow_blank=True)
+
+
+class BranchSelection(serializers.Serializer):
+    branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.filter(is_active=True))
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -68,7 +80,7 @@ class LoginView(APIView):
         if not user:
             return Response({"code": "invalid_credentials"}, status=400)
         login(request, user)
-        return Response(identity(user))
+        return Response(identity(request, user))
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -83,9 +95,13 @@ class RegisterView(APIView):
         user = get_user_model()(username=values["username"])
         try:
             validate_password(values["password"], user=user)
-            patient = Patient(reference="P-" + uuid4().hex[:20], full_name=values["full_name"], date_of_birth=values["date_of_birth"])
+            branch = values["preferred_branch"] if "preferred_branch" in values else default_branch()
+            patient = Patient(reference="P-" + uuid4().hex[:20], full_name=values["full_name"],
+                              date_of_birth=values["date_of_birth"], preferred_branch=branch)
             patient.full_clean()
             with transaction.atomic():
+                if branch is not None and not Branch.objects.select_for_update(no_key=True).filter(pk=branch.pk, is_active=True).first():
+                    return Response({"code": "branch_unavailable"}, status=400)
                 user.set_password(values["password"])
                 user.save()
                 group, _ = Group.objects.get_or_create(name="Patient")
@@ -95,7 +111,18 @@ class RegisterView(APIView):
         except (DjangoValidationError, IntegrityError):
             return Response({"code": "registration_failed"}, status=400)
         login(request, user)
-        return Response(identity(user), status=201)
+        return Response(identity(request, user), status=201)
+
+
+@extend_schema(request=BranchSelection, responses=IdentitySerializer)
+class ActiveBranchView(APIView):
+    def post(self, request):
+        if not request.user.is_active or role(request.user) != "Admin":
+            raise PermissionDenied()
+        selection = BranchSelection(data=request.data)
+        selection.is_valid(raise_exception=True)
+        request.session["active_branch_id"] = selection.validated_data["branch"].pk
+        return Response(identity(request, request.user))
 
 
 @extend_schema(request=None, responses=dict)
@@ -108,14 +135,14 @@ class LogoutView(APIView):
 @extend_schema(request=ProfileSerializer, responses=IdentitySerializer)
 class MeView(APIView):
     def get(self, request):
-        return Response(identity(request.user))
+        return Response(identity(request, request.user))
     def patch(self, request):
         data = ProfileSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         for key, value in data.validated_data.items():
             setattr(request.user, key, value)
         request.user.save(update_fields=list(data.validated_data) or ["first_name"])
-        return Response(identity(request.user))
+        return Response(identity(request, request.user))
 
 
 @extend_schema(request=PhoneSerializer, responses=PatientSerializer)

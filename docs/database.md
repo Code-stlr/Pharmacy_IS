@@ -17,19 +17,22 @@ When replacing an existing database, first save a private `pg_dump` and test its
 
 ## Entities and keys
 
-All models have an automatically generated bigint `id` primary key. Foreign keys are indexed by Django. Unique keys cover patient/prescription/dispensing references, doctor licenses, supplier/category names, medication presentations, and medication/lot pairs.
+Pharmacy models have an automatically generated bigint `id` primary key. Foreign keys are indexed by Django. Unique keys cover branch codes, patient/prescription/dispensing references, doctor licenses, supplier/category names, medication presentations, and branch/medication/lot combinations.
 
 | Entity | Purpose and relationships |
 |---|---|
 | Category | One category has many medications |
 | Medication | Ingredient, strength, dosage form, dispensing unit, Rx requirement |
 | Supplier | One supplier supplies many batches |
-| DrugBatch | Medication and supplier FKs; receipt/expiry dates, current stock and unit price |
-| Patient | Fictional demographics, allergy notes, optional unique user FK |
+| Branch | Pharmacy location with an active status and unique code |
+| UserBranch | One assigned branch per pharmacist account |
+| DrugBatch | Branch, medication and supplier FKs; receipt/expiry dates, current stock and unit price |
+| Patient | Shared demographics and allergies, optional unique user FK and preferred branch |
 | Doctor | Prescriber with unique license identifier |
 | Prescription | Patient and doctor FKs, reference, issue/expiry dates, status |
 | PrescriptionLine | Prescription and medication FKs, authorized quantity, directions |
-| DispensingTransaction | Patient, pharmacist user and batch FKs; optional prescription-line FK; quantity, price snapshot, timestamp |
+| DispensingTransaction | Patient, pharmacist user and batch FKs; optional prescription-line FK; quantity, price snapshot, timestamp and branch derived from the batch |
+| PatientAccessLog | Staff action, patient and account identifiers, active branch and timestamp |
 
 See [ERD](diagrams/domain-erd.md).
 
@@ -43,10 +46,11 @@ See [ERD](diagrams/domain-erd.md).
 - OTC dispensing can omit a prescription line. Patient identity is still required in this MVP.
 - Quantities are whole dispensing units (tablets, bottles, etc.), not an implicit mixture of packs and individual doses. Prices are per unit in KZT with two decimal places.
 - There is one line per medication per prescription; directions describe the regimen. Refills and repeat prescriptions are outside the current model.
+- Branch migrations backfill existing stock, pharmacist assignments and patient preferences into Main Branch. Patients and prescriptions remain shared. Historical dispensing rows retain their IDs and derive their supplying branch from their original batches.
 
 ## Transactional dispensing rules
 
-`backend/pharmacy/services.py` executes validation and writes in one database transaction, locks the prescription, line and batch, rejects inactive/expired/future-issued prescriptions and expired/inactive medication, caps cumulative dispensing at the prescribed quantity, decrements stock, and preserves the transaction price. Partial dispensing is supported by multiple transactions referencing the same line. Prescription status becomes completed when all lines are fulfilled. A batch expiring today is considered unavailable; batches not yet received are also rejected.
+`backend/pharmacy/services.py` executes validation and writes in one database transaction, locks the prescription, line and batch, and verifies the batch belongs to the active branch. It rejects inactive/expired/future-issued prescriptions and expired/inactive medication, caps cumulative dispensing across all branches at the prescribed quantity, decrements the supplying branch’s stock, and preserves the transaction price. Partial dispensing is supported by multiple transactions referencing the same line. Prescription status becomes completed when all lines are fulfilled. A batch expiring today is considered unavailable; batches not yet received are also rejected.
 
 These cross-record and concurrency rules are enforced by the dispensing service, not by the schema alone. `POST /api/dispensings/` uses that service and requires Admin or Pharmacist membership. Stock cannot be edited through the API after a batch is created, and transactions cannot be changed or deleted. Direct ORM writes must not be treated as a safe dispensing workflow. Allergy notes remain documentation, not an automated clinical decision engine.
 

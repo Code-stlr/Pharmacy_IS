@@ -9,7 +9,7 @@ import {
   DialogTitle,
   TextField,
 } from "@mui/material";
-import { api, ApiError, type RecordData } from "./api";
+import { api, ApiError, type Branch, type RecordData } from "./api";
 import { PageHeader } from "./Workspace";
 import ResourceForm from "./ResourceForm";
 import RecordList from "./RecordList";
@@ -17,10 +17,14 @@ import Icon from "./Icon";
 
 export default function AdminPanel({
   data,
+  activeBranch,
+  callApi,
   onChanged,
 }: {
   data: Record<string, RecordData[]>;
-  onChanged: () => void;
+  activeBranch: Branch | null;
+  callApi: typeof api;
+  onChanged: (resource: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState("users"),
@@ -34,7 +38,7 @@ export default function AdminPanel({
   useEffect(() => {
     let active = true;
     setBusy(true);
-    api("admin/" + tab + "/")
+    callApi("admin/" + tab + "/")
       .then((result) => {
         if (active) setRows(result);
       })
@@ -47,19 +51,19 @@ export default function AdminPanel({
     return () => {
       active = false;
     };
-  }, [tab, revision]);
-  function changed() {
+  }, [tab, revision, callApi]);
+  async function changed() {
+    await onChanged(tab);
     setRevision((x) => x + 1);
-    onChanged();
     setMessage("saved");
   }
   async function remove() {
     if (!deleting) return;
     setBusy(true);
     try {
-      await api("admin/" + tab + "/" + deleting.id + "/", "DELETE");
+      await callApi("admin/" + tab + "/" + deleting.id + "/", "DELETE");
       setDeleting(null);
-      changed();
+      await changed();
     } catch (e) {
       setMessage(e instanceof ApiError ? e.code : "error");
       setDeleting(null);
@@ -68,7 +72,7 @@ export default function AdminPanel({
     }
   }
   const filtered = rows.filter((row) =>
-    [row.username, row.name, row.full_name, row.reference, row.email].some(
+    [row.username, row.name, row.full_name, row.reference, row.email, row.code].some(
       (value) =>
         String(value || "")
           .toLowerCase()
@@ -104,6 +108,7 @@ export default function AdminPanel({
       >
         {[
           "users",
+          "branches",
           "medications",
           "categories",
           "suppliers",
@@ -155,7 +160,7 @@ export default function AdminPanel({
             rows={filtered}
             data={data}
             onEdit={(row) => setForm({ record: row })}
-            onDelete={setDeleting}
+            onDelete={tab === "branches" ? undefined : setDeleting}
           />
         )}
       </section>
@@ -164,15 +169,18 @@ export default function AdminPanel({
           resource={tab}
           record={form.record}
           data={data}
+          activeBranch={activeBranch}
+          callApi={callApi}
+          admin
           onClose={() => setForm(null)}
-          onAllergyAdded={onChanged}
+          onAllergyAdded={() => void onChanged("allergies")}
           onSave={async (values) => {
-            await api(
+            await callApi(
               "admin/" + tab + "/" + (form.record ? form.record.id + "/" : ""),
               form.record ? "PATCH" : "POST",
               values,
             );
-            changed();
+            await changed();
           }}
         />
       )}

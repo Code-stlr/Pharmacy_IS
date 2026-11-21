@@ -5,6 +5,23 @@ from django.db.models import Q, F
 from django.utils import timezone
 
 
+MAIN_BRANCH_CODE = "MAIN"
+
+
+class Branch(models.Model):
+    code = models.SlugField(max_length=32, unique=True)
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.code} — {self.name}"
+
+
+class UserBranch(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="branch_assignment")
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="staff_assignments")
+
+
 class Category(models.Model):
     name = models.CharField(max_length=120, unique=True)
 
@@ -24,6 +41,7 @@ class Allergy(models.Model):
 class Patient(models.Model):
     reference = models.CharField(max_length=32, unique=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    preferred_branch = models.ForeignKey(Branch, null=True, blank=True, on_delete=models.SET_NULL, related_name="preferred_patients")
     full_name = models.CharField(max_length=200)
     date_of_birth = models.DateField()
     phone = models.CharField(max_length=32, blank=True)
@@ -36,6 +54,31 @@ class Patient(models.Model):
 
     def __str__(self):
         return self.reference
+
+
+class PatientAccessLog(models.Model):
+    class Action(models.TextChoices):
+        READ = "read", "Read"
+        UPDATE = "update", "Update"
+        CREATE = "create", "Create"
+        DELETE = "delete", "Delete"
+        PRESCRIBE = "prescribe", "Prescribe"
+        DISPENSE = "dispense", "Dispense"
+
+    patient = models.ForeignKey(Patient, null=True, on_delete=models.SET_NULL, related_name="access_logs")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="patient_access_logs")
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="patient_access_logs")
+    action = models.CharField(max_length=12, choices=Action.choices)
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    patient_record_id = models.PositiveBigIntegerField(editable=False)
+    actor_user_id = models.PositiveBigIntegerField(editable=False)
+
+    def save(self, *args, **kwargs):
+        # Keep event identifiers if an account or patient record is later deleted.
+        if self._state.adding:
+            self.patient_record_id = self.patient_id
+            self.actor_user_id = self.actor_id
+        super().save(*args, **kwargs)
 
 
 class Doctor(models.Model):
@@ -66,6 +109,7 @@ class Medication(models.Model):
 
 
 class DrugBatch(models.Model):
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="batches")
     medication = models.ForeignKey(Medication, on_delete=models.PROTECT, related_name="batches")
     supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name="batches")
     lot_number = models.CharField(max_length=80)
@@ -76,7 +120,7 @@ class DrugBatch(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["medication", "lot_number"], name="unique_medication_lot"),
+            models.UniqueConstraint(fields=["branch", "medication", "lot_number"], name="unique_branch_medication_lot"),
             models.CheckConstraint(condition=Q(stock_quantity__gte=0), name="batch_nonnegative_stock"),
             models.CheckConstraint(condition=Q(unit_price__gt=0), name="batch_positive_price"),
             models.CheckConstraint(condition=Q(expires_on__gt=F("received_on")), name="batch_valid_dates"),

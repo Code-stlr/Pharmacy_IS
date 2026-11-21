@@ -4,27 +4,29 @@
 
 Start the stack following the root README, then run `docker compose exec backend python manage.py seed_demo`.
 
-To create fictional accounts, choose a strong demo-only password and run:
+To create the shared fictional accounts on localhost, run:
 
 ```powershell
-docker compose exec -e DEMO_PASSWORD="your-demo-password" backend python manage.py create_demo_users
+docker compose exec backend python manage.py create_demo_users --shared-demo
 ```
 
-The command creates `admin_demo`, `pharmacist_demo`, and `patient_demo` only if missing. It never resets existing passwords or changes existing roles. Run the seed command first so the new patient account can link to the fictional `DEMO-P001` patient. Public registration creates Patient accounts only. Roles can be provisioned by trusted operators through Django Groups; there is no public role assignment endpoint.
+The command creates missing accounts with the public team demo password `Demo-Pharmacy-2026!`. Run the seed command first so the new patient account can link to the fictional `DEMO-P001` patient. Existing accounts keep their passwords and roles. Public registration creates Patient accounts only. Use the admin panel to assign a pharmacist to an active branch.
 
-Use the password you supplied when creating these local accounts. Existing account passwords are never reset by provisioning. Open http://localhost:8080.
+To choose a custom password for newly created demo accounts, pass `DEMO_PASSWORD` to the command without `--shared-demo`. Open http://localhost:8081.
 
 ## Role behavior
 
-- Admin and Pharmacist: view, search, create and edit patients, categories, suppliers, doctors and medications; receive new batches; create prescriptions; dispense medication; view history.
-- Patient: view only their linked patient record, prescriptions and dispensing history; edit their own account name/email. Their phone can also be updated through `/api/auth/patient/`. Clinical identity and allergy notes are staff-managed.
+- Admin and Pharmacist: find and serve patients across branches, maintain shared catalogs and clinical records, and receive or dispense stock at the current branch. Pharmacists sign in directly to their assigned branch. Administrators can switch active branches without signing out.
+- Patient: view their own patient record, prescriptions and dispensing history across all branches, and edit their account name, email and phone. A branch selected at registration is a preference. Staff manage clinical identity and allergies.
 - Anonymous or unassigned users cannot access domain records. Superusers are treated as Admin.
 
 The frontend hides staff actions for patients. The API independently applies role checks and ownership filters. Admins also have `/admin` for user and reference-record management. There is no deletion API for clinical history and no stock edit API. Batch corrections, returns and cancellations remain later work.
 
 ## Admin panel
 
-Sign in as `admin_demo` and select Admin panel. Users, Medications, Categories, Suppliers, Doctors and Patients support search, creation, editing and confirmed deletion of eligible records. Passwords are required when creating users and optional when editing; stored passwords use Django hashing. Role assignment is restricted to administrators.
+Sign in as `admin_demo` and select Admin panel. Use **Branches** to create or update a location and the workspace switcher to choose which location’s stock you are working with. Use **Users** to create a pharmacist with an active branch assignment. Users and shared reference records support search, creation, editing and confirmed deletion of eligible records. Passwords are required when creating users and optional when editing. Role assignment is restricted to administrators.
+
+To give an existing patient portal access, create a Patient account under **Users** and select the existing patient record. Public registration creates a new patient record. Before creating a patient record at a branch, search the shared directory for the existing patient reference.
 
 The separate `/api/admin/{users,medications,categories,suppliers,doctors,patients}/` endpoints support GET, POST, PATCH and DELETE. They independently reject non-admin access. Linked clinical records cannot be deleted. Superusers and the current administrator are protected from destructive account changes; serialized account administration preserves an active administrator. Deactivate eligible linked accounts instead of erasing history. No admin endpoint deletes prescriptions, batches or dispensing transactions.
 
@@ -44,6 +46,13 @@ The workspace has an overview with real scoped counts, inventory availability an
 
 Use a medication marked as not requiring a prescription for OTC dispensing; leave the prescription-line field empty. All dispensing still requires a patient record in this MVP.
 
+## Demonstrate a cross-branch prescription fill
+
+1. In the admin panel, create a second branch and assign it a pharmacist. Switch to that branch and receive a batch of the same medication as a batch held at Main Branch.
+2. At Main Branch, record a fictional patient allergy and dispense part of a prescription. Use an allergy entry unrelated to the medication for this successful-fill scenario.
+3. Sign in as the second branch’s pharmacist. Find the same patient by reference in **Patients** and open their history. Confirm the allergy, first fill location and remaining prescription quantity.
+4. Complete the prescription using the second branch’s batch. The remaining quantity is zero, each location’s stock reflects its own fill, and the patient’s portal shows both locations in one history.
+
 ## API
 
 API clients first GET `/api/auth/csrf/` and send the returned token as `X-CSRFToken` on unsafe requests, keeping the session and CSRF cookies. Login and registration enforce CSRF for anonymous clients too. Cookies stay on the same origin; Nginx preserves the original Host including the port. No JWT or local-storage credential storage is used.
@@ -52,14 +61,17 @@ API clients first GET `/api/auth/csrf/` and send the returned token as `X-CSRFTo
 |---|---|
 | `/api/auth/login/`, `/api/auth/register/`, `/api/auth/logout/` | POST |
 | `/api/auth/me/` | GET, PATCH account name/email |
+| `/api/auth/branch/` | POST an active branch ID as `{"branch": id}` with an administrator session |
 | `/api/auth/patient/` | GET own linked record, PATCH own phone |
+| `/api/branches/` | Public GET active branch names and identifiers |
+| `/api/admin/branches/` | Administrator GET, POST and PATCH |
 | `/api/patients/`, `/api/medications/`, `/api/categories/`, `/api/suppliers/`, `/api/doctors/` | GET, POST, PATCH detail |
 | `/api/batches/`, `/api/prescriptions/` | GET, POST; immutable through this API after creation |
 | `/api/dispensings/` | GET, POST transactional dispensing |
 | `/api/schema/`, `/api/docs/` | Authenticated OpenAPI schema and Swagger UI |
 | `/api/health/` | Public GET readiness without database details |
 
-Search uses `?search=...`. Passwords use Django hashing and validation. Anonymous login/registration requests are throttled to 10 per minute per IP using the configured process-local cache. Distributed throttling, TLS and deployment hardening belong to VPS deployment.
+Search uses `?search=...`. Look up a patient by exact `?reference=...` and filter prescriptions or dispensing history with `?patient=<id>`. Login and account responses include `active_branch`. The workspace sends `X-Pharmacy-Branch` with the branch displayed in that tab, and the API validates it against the account’s branch privileges. Passwords use Django hashing and validation. Anonymous login/registration requests are throttled to 10 per minute per IP using the configured process-local cache. Distributed throttling, TLS and deployment hardening belong to VPS deployment.
 
 ## Localization
 

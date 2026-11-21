@@ -27,8 +27,9 @@ router = DefaultRouter()
 for prefix, view in [("patients", api.PatientViewSet), ("allergies", api.AllergyViewSet), ("categories", api.CategoryViewSet), ("suppliers", api.SupplierViewSet), ("doctors", api.DoctorViewSet), ("medications", api.MedicationViewSet), ("batches", api.BatchViewSet), ("prescriptions", api.PrescriptionViewSet), ("dispensings", api.DispensingViewSet)]:
     router.register(prefix, view)
 router.register("stock", api.StockViewSet, basename="stock")
+router.register("branches", api.BranchListViewSet, basename="branches")
 
-for prefix, view in [('users', admin_api.AdminUserViewSet), ('categories', admin_api.AdminCategoryViewSet), ('suppliers', admin_api.AdminSupplierViewSet), ('doctors', admin_api.AdminDoctorViewSet), ('medications', admin_api.AdminMedicationViewSet), ('patients', admin_api.AdminPatientViewSet)]:
+for prefix, view in [('users', admin_api.AdminUserViewSet), ('branches', admin_api.AdminBranchViewSet), ('categories', admin_api.AdminCategoryViewSet), ('suppliers', admin_api.AdminSupplierViewSet), ('doctors', admin_api.AdminDoctorViewSet), ('medications', admin_api.AdminMedicationViewSet), ('patients', admin_api.AdminPatientViewSet)]:
     router.register('admin/' + prefix, view, basename='admin-' + prefix)
 
 urlpatterns = [
@@ -37,6 +38,7 @@ urlpatterns = [
     path("api/auth/register/", auth.RegisterView.as_view()),
     path("api/auth/logout/", auth.LogoutView.as_view()),
     path("api/auth/me/", auth.MeView.as_view()),
+    path("api/auth/branch/", auth.ActiveBranchView.as_view()),
     path("api/auth/patient/", auth.MyPatientView.as_view()),
     path("api/", include(router.urls)),
     path("api/health/", health),

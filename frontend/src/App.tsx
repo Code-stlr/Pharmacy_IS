@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Alert, Button, MenuItem, TextField } from "@mui/material";
-import { api, ApiError, type RecordData, type User } from "./api";
+import { api, ApiError, type Branch, type RecordData, type User } from "./api";
 import Workspace, { Brand, LanguageSelect, PageHeader } from "./Workspace";
 import Dashboard from "./Dashboard";
 import RecordList from "./RecordList";
 import ResourceForm from "./ResourceForm";
+import PatientHistory from "./PatientHistory";
 import AdminPanel from "./AdminPanel";
 import Icon from "./Icon";
 import "./styles.css";
@@ -39,7 +40,11 @@ export default function App() {
   const page = location.pathname.split("/")[1] || "overview";
   const [user, setUser] = useState<User | null>(null),
     [checking, setChecking] = useState(true),
-    [registering, setRegistering] = useState(false);
+    [registering, setRegistering] = useState(false),
+    [authenticating, setAuthenticating] = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]),
+    [sessionAction, setSessionAction] = useState<"branch" | "logout" | null>(null),
+    [patientHistory, setPatientHistory] = useState<number | null>(null);
   const [data, setData] = useState<Record<string, RecordData[]>>({}),
     [rows, setRows] = useState<RecordData[]>([]),
     [search, setSearch] = useState(""),
@@ -52,7 +57,15 @@ export default function App() {
     resource: string;
     record?: RecordData;
   } | null>(null);
+  const sessionVersion = useRef(0);
+  const currentVersion = sessionVersion.current;
   const staff = user?.role === "Admin" || user?.role === "Pharmacist";
+  const branchId = user?.active_branch?.id;
+  const staffBranchId = staff ? branchId : undefined;
+  const workspaceApi = useCallback<typeof api>(
+    (path, method, payload) => api(path, method, payload, staffBranchId),
+    [staffBranchId],
+  );
   useEffect(() => {
     document.documentElement.lang = i18n.language;
     document.title = t("title") + " — " + t(page);
@@ -64,17 +77,32 @@ export default function App() {
       .finally(() => setChecking(false));
   }, []);
   useEffect(() => {
+    if (!staff && !registering) return;
+    let active = true;
+    api("branches/")
+      .then((value) => {
+        if (active && Array.isArray(value)) setBranches(value);
+      })
+      .catch((error) => {
+        if (active) showError(error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [staff, registering]);
+  useEffect(() => {
     setRows([]);
     setSearch("");
     setStockFilter("");
     setMessage("");
-    setForm(null);
+    setForm((current) => current?.resource === page ? current : null);
+    setPatientHistory(null);
   }, [page]);
   useEffect(() => {
-    if (!user) return;
+    if (!user || sessionAction) return;
     let active = true;
     setBusy(true);
-    Promise.all(endpoints.map(async (key) => [key, await api(key + "/")]))
+    Promise.all(endpoints.map(async (key) => [key, await workspaceApi(key + "/")]))
       .then((entries) => {
         if (active) setData(Object.fromEntries(entries));
       })
@@ -87,13 +115,13 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [user?.id, revision]);
+  }, [user?.id, workspaceApi, sessionAction, revision]);
   useEffect(() => {
-    if (!user || !endpoints.includes(page)) return;
+    if (!user || sessionAction || !endpoints.includes(page)) return;
     let active = true;
     const timer = setTimeout(
       () =>
-        api(
+        workspaceApi(
           page +
             "/?search=" +
             encodeURIComponent(search) +
@@ -112,15 +140,16 @@ export default function App() {
       active = false;
       clearTimeout(timer);
     };
-  }, [user?.id, page, search, stockPatient, stockFilter, revision]);
+  }, [user?.id, workspaceApi, sessionAction, page, search, stockPatient, stockFilter, revision]);
   function showError(error: unknown) {
     setMessage(error instanceof ApiError ? error.code : "error");
   }
   async function authenticate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
+    setAuthenticating(true);
     setMessage("");
-    const payload = Object.fromEntries(new FormData(event.currentTarget));
+    const payload: Record<string, FormDataEntryValue | null> = Object.fromEntries(new FormData(event.currentTarget));
+    if (registering && payload.preferred_branch === "") payload.preferred_branch = null;
     try {
       setUser(
         await api(
@@ -129,30 +158,82 @@ export default function App() {
           payload,
         ),
       );
+      setRegistering(false);
       setRevision((x) => x + 1);
     } catch (e) {
       showError(e);
     } finally {
-      setBusy(false);
+      setAuthenticating(false);
     }
   }
   async function logout() {
+    if (sessionAction || currentVersion !== sessionVersion.current) return;
+    sessionVersion.current += 1;
+    setSessionAction("logout");
     try {
       await api("auth/logout/", "POST");
+      clearWorkspace();
       setUser(null);
-      setData({});
-      setRows([]);
       setMessage("");
       navigate("/");
     } catch (e) {
       showError(e);
+    } finally {
+      setSessionAction(null);
     }
+  }
+  function clearWorkspace() {
+    setData({});
+    setRows([]);
+    setForm(null);
+    setPatientHistory(null);
+    setStockPatient("");
+    setStockFilter("");
+    setSearch("");
+  }
+  function updateIdentity(updated: User) {
+    if (updated.id !== user?.id || updated.role !== user?.role || updated.active_branch?.id !== branchId) {
+      sessionVersion.current += 1;
+      clearWorkspace();
+    }
+    setUser(updated);
+  }
+  async function switchBranch(id: number) {
+    if (id === branchId || sessionAction || currentVersion !== sessionVersion.current) return;
+    sessionVersion.current += 1;
+    setSessionAction("branch");
+    setMessage("");
+    try {
+      updateIdentity(await api("auth/branch/", "POST", { branch: id }));
+    } catch (error) {
+      showError(error);
+    } finally {
+      setSessionAction(null);
+    }
+  }
+  async function refreshAdminData(resource: string) {
+    if (currentVersion !== sessionVersion.current) return;
+    if (resource === "branches") {
+      try {
+        const [updated, activeBranches] = await Promise.all([
+          api("auth/me/"),
+          api("branches/"),
+        ]);
+        if (currentVersion !== sessionVersion.current) return;
+        updateIdentity(updated);
+        setBranches(activeBranches);
+      } catch (error) {
+        if (currentVersion !== sessionVersion.current) return;
+        showError(error);
+      }
+    }
+    setRevision((x) => x + 1);
   }
   async function save(values: Record<string, any>) {
     if (!form) return;
     const resource = form.resource,
       record = form.record;
-    await api(
+    const updated = await workspaceApi(
       resource === "profile"
         ? "auth/me/"
         : (resource === "dispense" ? "dispensings" : resource) +
@@ -161,7 +242,8 @@ export default function App() {
       resource === "profile" || record ? "PATCH" : "POST",
       values,
     );
-    if (resource === "profile") setUser(await api("auth/me/"));
+    if (currentVersion !== sessionVersion.current) return;
+    if (resource === "profile") updateIdentity(updated);
     setRevision((x) => x + 1);
     setMessage("saved");
   }
@@ -247,13 +329,30 @@ export default function App() {
                   required
                   slotProps={{ inputLabel: { shrink: true } }}
                 />
+                {branches.length > 0 && (
+                  <TextField
+                    fullWidth
+                    select
+                    label={t("preferred_branch")}
+                    name="preferred_branch"
+                    defaultValue=""
+                    helperText={t("preferredBranchHelp")}
+                  >
+                    <MenuItem value="">{t("none")}</MenuItem>
+                    {branches.map((branch) => (
+                      <MenuItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
               </>
             )}
             <Button
               fullWidth
               variant="contained"
               type="submit"
-              disabled={busy}
+              disabled={authenticating}
               endIcon={<Icon name="arrow" />}
             >
               {t(registering ? "register" : "login")}
@@ -289,7 +388,13 @@ export default function App() {
   const content =
     page === "admin" ? (
       user.role === "Admin" ? (
-        <AdminPanel data={data} onChanged={() => setRevision((x) => x + 1)} />
+        <AdminPanel
+          key={user.id + ":" + (branchId ?? "")}
+          data={{ ...data, branches }}
+          activeBranch={user.active_branch}
+          callApi={workspaceApi}
+          onChanged={refreshAdminData}
+        />
       ) : (
         <div className="access-denied">
           <Icon name="admin" size={44} />
@@ -330,6 +435,12 @@ export default function App() {
               <dt>{t("email")}</dt>
               <dd>{user.email || "—"}</dd>
             </div>
+            {user.role === "Patient" && (
+              <div>
+                <dt>{t("preferred_branch")}</dt>
+                <dd>{user.active_branch?.name ?? t("none")}</dd>
+              </div>
+            )}
           </dl>
           <Button
             variant="contained"
@@ -457,6 +568,7 @@ export default function App() {
               resource={page}
               rows={rows}
               data={data}
+              onView={page === "patients" ? (row) => setPatientHistory(row.id) : undefined}
               onEdit={
                 staff && editable.includes(page)
                   ? (record) => setForm({ resource: page, record })
@@ -473,7 +585,14 @@ export default function App() {
       </div>
     );
   return (
-    <Workspace user={user} page={page} onLogout={() => void logout()}>
+    <Workspace
+      user={user}
+      page={page}
+      branches={branches}
+      transitioning={Boolean(sessionAction)}
+      onSwitchBranch={(id) => void switchBranch(id)}
+      onLogout={() => void logout()}
+    >
       {message && (
         <Alert
           sx={{ mb: 3 }}
@@ -482,15 +601,26 @@ export default function App() {
           {t(message, { defaultValue: t("error") })}
         </Alert>
       )}
-      {content}
-      {form && (
+      {sessionAction ? (
+        <div className="loading-state" role="status">{t(sessionAction === "branch" ? "switchingBranch" : "loading")}</div>
+      ) : content}
+      {!sessionAction && form && (
         <ResourceForm
           resource={form.resource}
           record={form.record}
-          data={data}
-          onClose={() => setForm(null)}
+          data={{ ...data, branches }}
+          callApi={workspaceApi}
+          activeBranch={user.active_branch}
+          onClose={() => setForm((current) => current === form ? null : current)}
           onSave={save}
           onAllergyAdded={() => setRevision((x) => x + 1)}
+        />
+      )}
+      {!sessionAction && patientHistory !== null && (
+        <PatientHistory
+          patientId={patientHistory}
+          callApi={workspaceApi}
+          onClose={() => setPatientHistory(null)}
         />
       )}
     </Workspace>

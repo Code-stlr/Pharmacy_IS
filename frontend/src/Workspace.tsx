@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Drawer, IconButton, MenuItem, TextField } from "@mui/material";
+import { Button, Drawer, IconButton, Menu, MenuItem, TextField } from "@mui/material";
 import { NavLink } from "react-router-dom";
 import { languages } from "./i18n";
 import Icon from "./Icon";
-import type { User } from "./api";
+import type { Branch, User } from "./api";
 
 export function LanguageSelect() {
   const { t, i18n } = useTranslation();
@@ -43,16 +43,23 @@ export function Brand() {
 export default function Workspace({
   user,
   page,
+  branches,
+  transitioning,
+  onSwitchBranch,
   onLogout,
   children,
 }: {
   user: User;
   page: string;
+  branches: Branch[];
+  transitioning: boolean;
+  onSwitchBranch: (id: number) => void;
   onLogout: () => void;
   children: ReactNode;
 }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [branchMenu, setBranchMenu] = useState<HTMLElement | null>(null);
   const staff = user.role === "Admin" || user.role === "Pharmacist";
   const primary = staff
     ? [
@@ -101,7 +108,7 @@ export default function Workspace({
       )}
       <div className="sidebar-bottom">
         <nav>{nav(["profile"])}</nav>
-        <button className="nav-item logout" onClick={onLogout}>
+        <button className="nav-item logout" onClick={onLogout} disabled={transitioning}>
           <Icon name="logout" />
           <span>{t("logout")}</span>
         </button>
@@ -140,6 +147,47 @@ export default function Workspace({
             <strong>{t(page)}</strong>
           </div>
           <div className="topbar-right">
+            {user.role === "Admin" && (
+              <div className="branch-context">
+                <Button
+                  id="branch-menu-button"
+                  className="branch-switch"
+                  aria-label={t("switchBranch", { name: user.active_branch?.name ?? t("none") })}
+                  aria-haspopup="menu"
+                  aria-controls={branchMenu ? "branch-menu" : undefined}
+                  aria-expanded={Boolean(branchMenu)}
+                  disabled={transitioning || branches.length === 0}
+                  onClick={(event) => setBranchMenu(event.currentTarget)}
+                >
+                  <span>{user.active_branch?.name ?? t("selectBranch")}</span>
+                  <span aria-hidden="true">▾</span>
+                </Button>
+                <Menu
+                  anchorEl={branchMenu}
+                  open={Boolean(branchMenu)}
+                  onClose={() => setBranchMenu(null)}
+                  slotProps={{ list: { id: "branch-menu", "aria-labelledby": "branch-menu-button" } }}
+                >
+                  {branches.map((branch) => (
+                    <MenuItem
+                      key={branch.id}
+                      selected={branch.id === user.active_branch?.id}
+                      onClick={() => {
+                        setBranchMenu(null);
+                        onSwitchBranch(branch.id);
+                      }}
+                    >
+                      {branch.name} · {branch.code}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </div>
+            )}
+            {user.role === "Pharmacist" && (
+              <span className="branch-context branch-name" title={user.active_branch?.name}>
+                {user.active_branch?.name ?? t("branchUnassigned")}
+              </span>
+            )}
             <span className="today">
               {new Intl.DateTimeFormat(i18n.language, {
                 day: "numeric",

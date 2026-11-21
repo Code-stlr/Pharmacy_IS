@@ -1,34 +1,60 @@
 from django.db import IntegrityError, transaction
 from datetime import timedelta
 from decimal import Decimal
-from django.db.models import DecimalField, ExpressionWrapper, F, Min, Max, Sum, Q, Value
+from django.db.models import DecimalField, ExpressionWrapper, F, Min, Max, Prefetch, Sum, Q, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import viewsets, mixins
 from rest_framework.filters import SearchFilter
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny, BasePermission, SAFE_METHODS
 from rest_framework.exceptions import ValidationError
-from .models import Allergy, Category, Supplier, Doctor, Patient, Medication, DrugBatch, Prescription, DispensingTransaction
-from .serializers import LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS, AllergySerializer, StockSerializer, CategorySerializer, SupplierSerializer, DoctorSerializer, PatientSerializer, MedicationSerializer, BatchSerializer, PrescriptionSerializer, DispensingSerializer
+from rest_framework.response import Response
+from .branches import audit_patient, operating_branch, role
+from .models import Allergy, Branch, Category, Supplier, Doctor, Patient, Medication, DrugBatch, Prescription, DispensingTransaction
+from .serializers import LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS, AllergySerializer, BranchSerializer, StockSerializer, CategorySerializer, SupplierSerializer, DoctorSerializer, PatientSerializer, MedicationSerializer, BatchSerializer, PrescriptionSerializer, DispensingSerializer
 from .services import dispense
-
-
-def role(user):
-    if not user.is_authenticated:
-        return None
-    if user.is_superuser or user.groups.filter(name="Admin").exists():
-        return "Admin"
-    if user.groups.filter(name="Pharmacist").exists():
-        return "Pharmacist"
-    if user.groups.filter(name="Patient").exists():
-        return "Patient"
-    return None
 
 
 class DomainPermission(BasePermission):
     def has_permission(self, request, view):
         current = role(request.user)
-        return current in ["Admin", "Pharmacist"] or (current == "Patient" and request.method in SAFE_METHODS)
+        allowed = request.user.is_active and (current in ("Admin", "Pharmacist") or (current == "Patient" and request.method in SAFE_METHODS))
+        if allowed:
+            request.operating_branch = operating_branch(request, current)
+        return allowed
+
+
+class BranchListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = Branch.objects.filter(is_active=True).order_by("name", "pk")
+    serializer_class = BranchSerializer
+    permission_classes = [AllowAny]
+
+
+def patient_subject(record):
+    if isinstance(record, Patient):
+        return record
+    if isinstance(record, (Prescription, DispensingTransaction)):
+        return record.patient
+    return None
+
+
+def patient_id_from(request):
+    supplied = request.query_params.get("patient")
+    if supplied is None:
+        return None
+    if not supplied.isascii() or not supplied.isdecimal() or len(supplied) > 19 or not 0 < int(supplied) <= 2**63 - 1:
+        raise ValidationError({"code": "invalid_patient"})
+    return int(supplied)
+
+
+def audit_patient_query(request):
+    if getattr(request, "operating_branch", None) and request.method == "GET":
+        patient_id = patient_id_from(request)
+        if patient_id is not None:
+            patient = Patient.objects.filter(pk=patient_id).first()
+            if patient is not None:
+                audit_patient(request, patient, "read")
 
 
 class ResourceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
@@ -38,6 +64,8 @@ class ResourceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.C
 
     def get_queryset(self):
         qs = super().get_queryset()
+        if getattr(self, "swagger_fake_view", False) or self.request is None:
+            return qs.none()
         if role(self.request.user) == "Patient":
             if qs.model == Patient:
                 return qs.filter(user=self.request.user)
@@ -46,20 +74,38 @@ class ResourceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.C
             return qs.none()
         return qs
 
+    def get_serializer_context(self):
+        return super().get_serializer_context() | {"operating_branch": getattr(self.request, "operating_branch", None)}
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = self.get_serializer(instance).data
+        patient = patient_subject(instance)
+        if patient is not None:
+            audit_patient(request, patient, "read")
+        return Response(data)
+
     def perform_create(self, serializer):
         try:
             with transaction.atomic():
-                serializer.save()
+                instance = serializer.save()
+                patient = patient_subject(instance)
+                if patient is not None:
+                    action = "prescribe" if isinstance(instance, Prescription) else "create"
+                    audit_patient(self.request, patient, action)
         except IntegrityError:
             raise ValidationError({"code": "conflict"})
 
     def perform_update(self, serializer):
         try:
             with transaction.atomic():
-                # Prevent a stock update or prescription edit racing with dispensing.
-                locked = self.get_queryset().select_for_update().get(pk=serializer.instance.pk)
+                # Serialize patient allergy edits with the dispensing service.
+                locked = get_object_or_404(self.get_queryset().select_for_update(no_key=True), pk=serializer.instance.pk)
                 serializer.instance = locked
-                serializer.save()
+                instance = serializer.save()
+                patient = patient_subject(instance)
+                if patient is not None:
+                    audit_patient(self.request, patient, "update")
         except IntegrityError:
             raise ValidationError({"code": "conflict"})
 
@@ -68,6 +114,19 @@ class PatientViewSet(ResourceViewSet):
     queryset = Patient.objects.all().order_by("reference")
     serializer_class = PatientSerializer
     search_fields = ["reference", "full_name", "phone"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        reference = self.request.query_params.get("reference") if self.request else None
+        return qs.filter(reference=reference) if reference is not None else qs
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        if "reference" in request.query_params:
+            patient = self.filter_queryset(self.get_queryset()).first()
+            if patient is not None:
+                audit_patient(request, patient, "read")
+        return response
 
 
 class CategoryViewSet(ResourceViewSet):
@@ -98,22 +157,51 @@ class BatchViewSet(ResourceViewSet):
     # Received stock is immutable through this API after creation; dispensing owns decrements.
     http_method_names = ["get", "post", "head", "options"]
 
+    def get_queryset(self):
+        return super().get_queryset().filter(branch=getattr(self.request, "operating_branch", None))
 
-class PrescriptionViewSet(ResourceViewSet):
+    @transaction.atomic
+    def perform_create(self, serializer):
+        branch = Branch.objects.select_for_update(no_key=True).get(pk=self.request.operating_branch.pk)
+        if not branch.is_active:
+            raise ValidationError({"code": "branch_unavailable"})
+        super().perform_create(serializer)
+
+
+class PatientHistoryViewSet(ResourceViewSet):
+    def get_queryset(self):
+        qs = super().get_queryset()
+        patient_id = patient_id_from(self.request) if self.request else None
+        return qs.filter(patient_id=patient_id) if patient_id is not None else qs
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        audit_patient_query(request)
+        return response
+
+
+class PrescriptionViewSet(PatientHistoryViewSet):
     queryset = Prescription.objects.select_related("patient").prefetch_related("lines__medication").order_by("-issued_on", "-id")
     serializer_class = PrescriptionSerializer
     search_fields = ["reference", "patient__full_name", "lines__medication__name"]
     http_method_names = ["get", "post", "head", "options"]
 
 
-class DispensingViewSet(ResourceViewSet):
-    queryset = DispensingTransaction.objects.select_related("patient", "batch__medication").order_by("-dispensed_at")
+class DispensingViewSet(PatientHistoryViewSet):
+    queryset = DispensingTransaction.objects.select_related("patient", "batch__medication", "batch__branch").order_by("-dispensed_at")
     serializer_class = DispensingSerializer
     search_fields = ["reference", "patient__full_name", "batch__medication__name"]
     http_method_names = ["get", "post", "head", "options"]
 
     def perform_create(self, serializer):
-        serializer.instance = dispense(**serializer.validated_data, pharmacist=self.request.user)
+        try:
+            serializer.instance = dispense(
+                **serializer.validated_data,
+                pharmacist=self.request.user,
+                branch=self.request.operating_branch,
+            )
+        except IntegrityError:
+            raise ValidationError({"code": "conflict"})
 
 
 class AllergyViewSet(ResourceViewSet):
@@ -130,12 +218,15 @@ class StockViewSet(ResourceViewSet):
     http_method_names = ["get", "head", "options"]
 
     def get_queryset(self):
-        if role(self.request.user) == "Patient":
+        branch = getattr(self.request, "operating_branch", None)
+        if branch is None:
             return Medication.objects.none()
         today = timezone.localdate()
-        usable = Q(batches__expires_on__gt=today, batches__stock_quantity__gt=0)
+        same_branch = Q(batches__branch=branch)
+        usable = same_branch & Q(batches__received_on__lte=today, batches__expires_on__gt=today, batches__stock_quantity__gt=0)
         money = DecimalField(max_digits=14, decimal_places=2)
-        qs = Medication.objects.filter(is_active=True).prefetch_related("batches").annotate(
+        scoped_batches = Prefetch("batches", queryset=DrugBatch.objects.filter(branch=branch).order_by("expires_on", "pk"), to_attr="branch_batches")
+        qs = Medication.objects.filter(is_active=True).prefetch_related(scoped_batches).annotate(
             total_stock=Coalesce(Sum("batches__stock_quantity", filter=usable), 0),
             min_price=Min("batches__unit_price", filter=usable),
             max_price=Max("batches__unit_price", filter=usable),
@@ -143,7 +234,7 @@ class StockViewSet(ResourceViewSet):
             stock_value=Coalesce(
                 Sum(ExpressionWrapper(F("batches__stock_quantity") * F("batches__unit_price"), output_field=money), filter=usable),
                 Value(Decimal("0")), output_field=money),
-            expired_quantity=Coalesce(Sum("batches__stock_quantity", filter=Q(batches__expires_on__lte=today)), 0),
+            expired_quantity=Coalesce(Sum("batches__stock_quantity", filter=same_branch & Q(batches__expires_on__lte=today)), 0),
         )
         # Optional filter: low stock, expiring soon, or holding expired batches.
         flt = self.request.query_params.get("filter", "")
@@ -157,9 +248,19 @@ class StockViewSet(ResourceViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        patient = self.request.query_params.get("patient", "")
         keywords = []
-        if patient.isdigit():
-            keywords = list(Allergy.objects.filter(patients__pk=int(patient)).exclude(ingredient_keyword="").values_list("ingredient_keyword", flat=True))
+        if context["operating_branch"] is not None:
+            patient_id = patient_id_from(self.request)
+            keywords = list(Allergy.objects.filter(patients__pk=patient_id).exclude(ingredient_keyword="").values_list("ingredient_keyword", flat=True)) if patient_id else []
         context["allergy_keywords"] = keywords
         return context
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        audit_patient_query(request)
+        return response
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        audit_patient_query(request)
+        return response

@@ -120,7 +120,7 @@ export default function Dashboard({
                   </span>
                   <div>
                     <strong>{item.medication_name}</strong>
-                    <span>{item.patient_name}</span>
+                    <span>{[item.patient_name, item.branch_name].filter(Boolean).join(" · ")}</span>
                   </div>
                   <div className="activity-amount">
                     <strong>−{item.quantity}</strong>

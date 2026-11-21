@@ -1,13 +1,18 @@
 # Pharmacy IS relational model
 
-The Mermaid ER diagram below corresponds to the initial Django migration. Every entity uses `id` as its PK. Django's authentication tables are represented by User; its existing groups and permissions are omitted for readability.
+The Mermaid ER diagram shows the application’s branch, patient and inventory relationships. Every entity uses `id` as its PK. User represents Django accounts.
 
 ```mermaid
 erDiagram
     Category ||--o{ Medication : categorizes
+    Branch ||--o{ DrugBatch : holds
+    Branch ||--o{ UserBranch : assigns
+    User ||--o| UserBranch : has
+    Branch o|--o{ Patient : preferred_by
     Medication ||--o{ DrugBatch : stocked_as
     Supplier ||--o{ DrugBatch : supplies
     User o|--o| Patient : optional_account
+    Patient }o--o{ Allergy : has
     Patient ||--o{ Prescription : receives
     Doctor ||--o{ Prescription : issues
     Prescription ||--o{ PrescriptionLine : contains
@@ -16,6 +21,20 @@ erDiagram
     User ||--o{ DispensingTransaction : records
     DrugBatch ||--o{ DispensingTransaction : dispensed_from
     PrescriptionLine o|--o{ DispensingTransaction : authorizes
+    Branch ||--o{ PatientAccessLog : context_for
+    Patient o|--o{ PatientAccessLog : audited
+    User o|--o{ PatientAccessLog : acts
+    Branch {
+        bigint id PK
+        string code UK
+        string name
+        boolean is_active
+    }
+    UserBranch {
+        bigint id PK
+        int user_id FK,UK
+        bigint branch_id FK
+    }
     Category {
         bigint id PK
         string name UK
@@ -38,6 +57,7 @@ erDiagram
     }
     DrugBatch {
         bigint id PK
+        bigint branch_id FK
         bigint medication_id FK
         bigint supplier_id FK
         string lot_number
@@ -50,10 +70,16 @@ erDiagram
         bigint id PK
         string reference UK
         int user_id FK,UK
+        bigint preferred_branch_id FK
         string full_name
         date date_of_birth
         string phone
         text allergy_notes
+    }
+    Allergy {
+        bigint id PK
+        string name UK
+        string ingredient_keyword
     }
     Doctor {
         bigint id PK
@@ -91,6 +117,14 @@ erDiagram
         decimal unit_price
         datetime dispensed_at
     }
+    PatientAccessLog {
+        bigint id PK
+        bigint branch_id FK
+        bigint patient_id FK
+        int actor_id FK
+        string action
+        datetime timestamp
+    }
 ```
 
-Composite unique keys: Medication(name, strength, dosage_form), DrugBatch(medication_id, lot_number), PrescriptionLine(prescription_id, medication_id). The prescription API rejects empty line lists. Django User uses an integer PK, so its referencing columns use integer rather than bigint.
+Composite unique keys: Medication(name, strength, dosage_form), DrugBatch(branch_id, medication_id, lot_number), and PrescriptionLine(prescription_id, medication_id). Each dispensing location is derived from the referenced batch.

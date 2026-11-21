@@ -36,31 +36,38 @@ const columns: Record<string, string[]> = {
     "quantity",
     "unit_price",
     "dispensed_at",
+    "branch_name",
   ],
   categories: ["name"],
   suppliers: ["name", "phone"],
   doctors: ["full_name", "license_number"],
-  users: ["username", "email", "role", "is_active"],
+  users: ["username", "email", "role", "branch", "is_active"],
+  branches: ["name", "code", "is_active"],
 };
 export default function RecordList({
   resource,
   rows,
   data,
+  onView,
   onEdit,
   onDelete,
 }: {
   resource: string;
   rows: RecordData[];
   data: Record<string, RecordData[]>;
+  onView?: (row: RecordData) => void;
   onEdit?: (row: RecordData) => void;
   onDelete?: (row: RecordData) => void;
 }) {
   const { t, i18n } = useTranslation();
   const fields = columns[resource] || ["name"];
+  const hasActions = Boolean(onView || onEdit || onDelete);
   function value(row: RecordData, key: string) {
     const v = row[key];
     if (key === "category")
       return (data.categories || []).find((item) => item.id === v)?.name || "—";
+    if (key === "branch")
+      return (data.branches || []).find((item) => item.id === v)?.name || (v ? t("inactiveBranch") : "—");
     if (key === "allergy_names")
       return Array.isArray(v) && v.length ? v.join(", ") : "—";
     if (key === "total_stock")
@@ -143,7 +150,7 @@ export default function RecordList({
                 {t(key)}
               </th>
             ))}
-            {(onEdit || onDelete) && (
+            {hasActions && (
               <th scope="col" className="actions-column">
                 {t("actions")}
               </th>
@@ -154,7 +161,7 @@ export default function RecordList({
           {rows.map((row) => (
             <tr key={row.id}>
               <td
-                colSpan={fields.length + (onEdit || onDelete ? 1 : 0)}
+                colSpan={fields.length + (hasActions ? 1 : 0)}
                 className="record-cell"
               >
                 <div
@@ -177,8 +184,13 @@ export default function RecordList({
                       {value(row, key)}
                     </div>
                   ))}
-                  {(onEdit || onDelete) && (
+                  {hasActions && (
                     <div className="row-actions">
+                      {onView && (
+                        <Button size="small" onClick={() => onView(row)}>
+                          {t("viewPatientHistory")}
+                        </Button>
+                      )}
                       {onEdit && (
                         <Button
                           size="small"
@@ -216,6 +228,9 @@ export default function RecordList({
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           }).format(Number(b.unit_price))}{" "}
+                          {b.status === "pending" && b.received_on && (
+                            <>· {t("received_on")}: {b.received_on} </>
+                          )}
                           · {t("expires_on")}: {b.expires_on}{" "}
                           <Chip
                             size="small"
@@ -224,7 +239,9 @@ export default function RecordList({
                                 ? "success"
                                 : b.status === "expiring"
                                   ? "warning"
-                                  : "error"
+                                  : b.status === "pending"
+                                    ? "default"
+                                    : "error"
                             }
                             label={t("batchStatus_" + b.status)}
                           />

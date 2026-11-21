@@ -5,7 +5,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
-from pharmacy.models import Allergy, Category, Patient, Doctor, Supplier, Medication, DrugBatch, Prescription, PrescriptionLine
+from pharmacy.models import MAIN_BRANCH_CODE, Allergy, Branch, Category, Patient, Doctor, Supplier, Medication, DrugBatch, Prescription, PrescriptionLine
 from pharmacy.services import dispense
 
 
@@ -18,8 +18,9 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         today = timezone.localdate()
+        main, _ = Branch.objects.get_or_create(code=MAIN_BRANCH_CODE, defaults={"name": "Main Branch"})
         category, _ = Category.objects.get_or_create(name="Demo medicines")
-        patient, _ = Patient.objects.get_or_create(reference="DEMO-P001", defaults={"full_name": "Demo Patient One", "date_of_birth": date(2000, 1, 1), "allergy_notes": ""})
+        patient, _ = Patient.objects.get_or_create(reference="DEMO-P001", defaults={"full_name": "Demo Patient One", "date_of_birth": date(2000, 1, 1), "allergy_notes": "", "preferred_branch": main})
         for name, keyword in [("Penicillin", "penicillin"), ("Aspirin", "acetylsalicylic"), ("Ibuprofen", "ibuprofen"), ("Lactose", "lactose"), ("Sulfonamides", "sulfa")]:
             Allergy.objects.get_or_create(name=name, defaults={"ingredient_keyword": keyword})
         doctor, _ = Doctor.objects.get_or_create(license_number="DEMO-DOCTOR-001", defaults={"full_name": "Demo Doctor"})
@@ -27,16 +28,16 @@ class Command(BaseCommand):
         medication, _ = Medication.objects.get_or_create(name="Demo Prescription Medicine", strength="10 mg", dosage_form="tablet", defaults={"category": category, "active_ingredient": "Fictional ingredient A", "unit": "tablet", "requires_prescription": True})
         otc, _ = Medication.objects.get_or_create(name="Demo OTC Medicine", strength="5 mg", dosage_form="tablet", defaults={"category": category, "active_ingredient": "Fictional ingredient B", "unit": "tablet", "requires_prescription": False})
         for medicine in [medication, otc]:
-            DrugBatch.objects.get_or_create(medication=medicine, lot_number="DEMO-LOT-001", defaults={"supplier": supplier, "received_on": today, "expires_on": today + timedelta(days=365), "stock_quantity": 100, "unit_price": Decimal("25.00")})
+            DrugBatch.objects.get_or_create(branch=main, medication=medicine, lot_number="DEMO-LOT-001", defaults={"supplier": supplier, "received_on": today, "expires_on": today + timedelta(days=365), "stock_quantity": 100, "unit_price": Decimal("25.00")})
         prescription, _ = Prescription.objects.get_or_create(reference="DEMO-RX001", defaults={"patient": patient, "doctor": doctor, "issued_on": today, "valid_until": today + timedelta(days=30)})
         if prescription.patient_id != patient.id:
             raise CommandError("Demo reference belongs to another patient; no data was changed.")
         PrescriptionLine.objects.get_or_create(prescription=prescription, medication=medication, defaults={"quantity_prescribed": 20, "directions": "Fictional demonstration instructions; not clinical guidance."})
         if options["full"]:
-            self.seed_full_demo(today, category, doctor, supplier)
+            self.seed_full_demo(today, main, category, doctor, supplier)
         self.stdout.write(self.style.SUCCESS("Demo records ready. Existing data and stock were preserved."))
 
-    def seed_full_demo(self, today, category, doctor, supplier):
+    def seed_full_demo(self, today, branch, category, doctor, supplier):
         # Generate synthetic records from scratch; no source database or dump is read.
         actor, _ = get_user_model().objects.get_or_create(
             username="showcase_history",
@@ -62,6 +63,7 @@ class Command(BaseCommand):
             medicines.append(medicine)
 
         DrugBatch.objects.get_or_create(
+            branch=branch,
             medication=medicines[0],
             lot_number="SHOWCASE-EXPIRED",
             defaults={
@@ -73,14 +75,14 @@ class Command(BaseCommand):
         for number in range(2, 105):
             patient, created = Patient.objects.get_or_create(
                 reference=f"SHOWCASE-P{number:03d}",
-                defaults={"full_name": f"Fictional Patient {number:03d}", "date_of_birth": date(1980 + number % 25, 1, 1)},
+                defaults={"full_name": f"Fictional Patient {number:03d}", "date_of_birth": date(1980 + number % 25, 1, 1), "preferred_branch": branch},
             )
             if not created:
                 continue
             medicine_index = (number - 2) % len(medicines)
             medicine = medicines[medicine_index]
             batch = DrugBatch.objects.create(
-                medication=medicine, supplier=supplier, lot_number=f"SHOWCASE-LOT-{number:03d}",
+                branch=branch, medication=medicine, supplier=supplier, lot_number=f"SHOWCASE-LOT-{number:03d}",
                 received_on=today - timedelta(days=30),
                 expires_on=today + timedelta(days=10 if medicine_index == 1 else 365),
                 stock_quantity=4 if medicine_index == 2 else 40,
@@ -100,5 +102,5 @@ class Command(BaseCommand):
             )
             dispense(
                 patient=patient, batch=batch, prescription_line=line if medicine.requires_prescription else None,
-                quantity=2, pharmacist=actor,
+                quantity=2, pharmacist=actor, branch=branch,
             )

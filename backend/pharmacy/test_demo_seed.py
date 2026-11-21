@@ -4,10 +4,29 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 
-from pharmacy.models import Allergy, DispensingTransaction, DrugBatch, Medication, Patient, Prescription
+from pharmacy.models import Allergy, DispensingTransaction, DrugBatch, Medication, Patient, Prescription, UserBranch
 
 
 class FullDemoSeedTests(TestCase):
+    def test_shared_accounts_use_team_password_and_rerun_preserves_existing_accounts(self):
+        call_command("seed_demo", stdout=StringIO())
+        call_command("create_demo_users", shared_demo=True, stdout=StringIO())
+        users = get_user_model().objects
+        for username, group in [("admin_demo", "Admin"), ("pharmacist_demo", "Pharmacist"), ("patient_demo", "Patient")]:
+            account = users.get(username=username)
+            self.assertTrue(account.check_password("Demo-Pharmacy-2026!"))
+            self.assertEqual(list(account.groups.values_list("name", flat=True)), [group])
+
+        self.assertEqual(UserBranch.objects.get(user__username="pharmacist_demo").branch.code, "MAIN")
+        self.assertEqual(Patient.objects.get(user__username="patient_demo").reference, "DEMO-P001")
+        admin = users.get(username="admin_demo")
+        admin.set_password("Different-local-demo-2026!")
+        admin.save(update_fields=["password"])
+        call_command("create_demo_users", shared_demo=True, stdout=StringIO())
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password("Different-local-demo-2026!"))
+        self.assertEqual(users.count(), 3)
+
     def test_full_seed_has_fictional_workflows_and_preserves_stock_on_rerun(self):
         call_command("seed_demo", full=True, stdout=StringIO())
 

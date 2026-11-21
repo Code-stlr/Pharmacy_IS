@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import serializers
-from .models import Allergy, Category, Supplier, Doctor, Patient, Medication, DrugBatch, Prescription, PrescriptionLine, DispensingTransaction
+from .models import Allergy, Branch, MAIN_BRANCH_CODE, Category, Supplier, Doctor, Patient, Medication, DrugBatch, Prescription, PrescriptionLine, DispensingTransaction
 
 
 class ValidatedModelSerializer(serializers.ModelSerializer):
@@ -17,6 +17,17 @@ class ValidatedModelSerializer(serializers.ModelSerializer):
         except DjangoValidationError:
             raise serializers.ValidationError({"code": "invalid_record"})
         return attrs
+
+
+class BranchSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = Branch
+        fields = ["id", "code", "name", "is_active"]
+
+    def validate_code(self, value):
+        if self.instance and self.instance.code == MAIN_BRANCH_CODE and value != MAIN_BRANCH_CODE:
+            raise serializers.ValidationError("The Main Branch code is reserved.")
+        return value
 
 
 class CategorySerializer(ValidatedModelSerializer):
@@ -45,6 +56,7 @@ class AllergySerializer(ValidatedModelSerializer):
 
 class PatientSerializer(ValidatedModelSerializer):
     allergy_names = serializers.SlugRelatedField(source="allergies", many=True, read_only=True, slug_field="name")
+    preferred_branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.filter(is_active=True), required=False, allow_null=True)
 
     class Meta:
         model = Patient
@@ -71,6 +83,13 @@ class BatchSerializer(ValidatedModelSerializer):
     class Meta:
         model = DrugBatch
         fields = "__all__"
+        read_only_fields = ["branch"]
+
+    def validate(self, attrs):
+        branch = self.context.get("operating_branch")
+        if branch is None:
+            raise serializers.ValidationError({"code": "branch_required"})
+        return super().validate(attrs | {"branch": branch})
 
 
 LOW_STOCK_THRESHOLD = 20
@@ -97,8 +116,10 @@ class StockSerializer(serializers.ModelSerializer):
         today = timezone.localdate()
         soon = today + timedelta(days=EXPIRY_WARNING_DAYS)
         result = []
-        for batch in sorted(obj.batches.all(), key=lambda b: b.expires_on):
-            if batch.expires_on <= today:
+        for batch in obj.branch_batches:
+            if batch.received_on > today:
+                status = "pending"
+            elif batch.expires_on <= today:
                 status = "expired"
             elif batch.stock_quantity == 0:
                 status = "empty"
@@ -107,7 +128,8 @@ class StockSerializer(serializers.ModelSerializer):
             else:
                 status = "ok"
             result.append({"id": batch.id, "lot_number": batch.lot_number, "stock_quantity": batch.stock_quantity,
-                           "unit_price": str(batch.unit_price), "expires_on": batch.expires_on.isoformat(), "status": status})
+                           "unit_price": str(batch.unit_price), "received_on": batch.received_on.isoformat(),
+                           "expires_on": batch.expires_on.isoformat(), "status": status})
         return result
 
     def get_unsafe_for_patient(self, obj) -> bool:
@@ -157,8 +179,18 @@ class PrescriptionSerializer(ValidatedModelSerializer):
 class DispensingSerializer(serializers.ModelSerializer):
     medication_name = serializers.CharField(source="batch.medication.name", read_only=True)
     patient_name = serializers.CharField(source="patient.full_name", read_only=True)
+    branch = serializers.IntegerField(source="batch.branch_id", read_only=True)
+    branch_name = serializers.CharField(source="batch.branch.name", read_only=True)
+    batch = serializers.PrimaryKeyRelatedField(queryset=DrugBatch.objects.none())
     class Meta:
         model = DispensingTransaction
         fields = "__all__"
         read_only_fields = ["reference", "pharmacist", "unit_price", "dispensed_at"]
     quantity = serializers.IntegerField(min_value=1)
+
+    def get_fields(self):
+        fields = super().get_fields()
+        branch = self.context.get("operating_branch")
+        if branch is not None:
+            fields["batch"].queryset = DrugBatch.objects.filter(branch=branch)
+        return fields

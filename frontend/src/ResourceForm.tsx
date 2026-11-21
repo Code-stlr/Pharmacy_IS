@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -10,13 +10,16 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
-import { api, ApiError, type RecordData } from "./api";
+import { api, ApiError, type Branch, type RecordData } from "./api";
 import { resources, type Field } from "./resources";
 
 export default function ResourceForm({
   resource,
   record,
   data,
+  activeBranch,
+  callApi = api,
+  admin = false,
   onClose,
   onSave,
   onAllergyAdded,
@@ -24,6 +27,9 @@ export default function ResourceForm({
   resource: string;
   record?: RecordData;
   data: Record<string, RecordData[]>;
+  activeBranch?: Branch | null;
+  callApi?: typeof api;
+  admin?: boolean;
   onClose: () => void;
   onSave: (values: Record<string, any>) => Promise<void>;
   onAllergyAdded?: () => void;
@@ -53,6 +59,31 @@ export default function ResourceForm({
     [error, setError] = useState(""),
     [errorFields, setErrorFields] = useState<string[]>([]),
     [confirm, setConfirm] = useState(false);
+  const patientId = resource === "patients" ? record?.id : undefined;
+  const [patientRecord, setPatientRecord] = useState<RecordData | null>(null);
+  const ready = patientId === undefined || patientRecord !== null;
+  useEffect(() => {
+    if (patientId === undefined) return;
+    let active = true;
+    callApi((admin ? "admin/" : "") + `patients/${patientId}/`)
+      .then((patient) => {
+        if (active) {
+          setValues(patient);
+          setPatientRecord(patient);
+        }
+      })
+      .catch((reason) => {
+        if (active) setError(reason instanceof ApiError ? reason.code : "error");
+      });
+    return () => { active = false; };
+  }, [admin, callApi, patientId]);
+  const fields = schema.filter((field) => {
+    if (resource !== "users") return true;
+    if (field.name === "patient") return !record?.patient && values.role === "Patient";
+    if (field.name === "branch")
+      return values.role === "Pharmacist" || (values.role === "Patient" && Boolean(values.patient));
+    return true;
+  });
   const lineOptions = (data.prescriptions || [])
     .filter(
       (p) => p.patient === Number(values.patient) && p.status === "active",
@@ -98,12 +129,24 @@ export default function ResourceForm({
       field.relation || field.options || field.type === "boolean",
     );
     const optional =
-      field.optional || (field.name === "password" && Boolean(record));
+      (field.optional || (field.name === "password" && Boolean(record))) &&
+      !(field.name === "branch" && values.role === "Pharmacist");
+    const preferredBranch =
+      field.name === "preferred_branch" || (field.name === "branch" && values.role === "Patient");
+    const unavailableBranch =
+      field.relation === "branches" &&
+      form[field.name] &&
+      !options.some((option) => option.id === form[field.name]);
+    let help: string | undefined;
+    if (preferredBranch) help = "preferredBranchHelp";
+    if (field.name === "patient" && resource === "users") help = "linkPatientHelp";
+    if (field.name === "allergy_notes") help = "allergyNotesHelp";
+    if (resource === "allergies" && field.name === "ingredient_keyword") help = "allergyKeywordHelp";
     return (
       <TextField
         key={field.name}
         fullWidth
-        label={t(field.name)}
+        label={t(preferredBranch ? "preferred_branch" : field.name)}
         required={!optional}
         value={
           field.multiple
@@ -121,13 +164,7 @@ export default function ResourceForm({
               : field.type || "text"
         }
         error={errorFields.includes(field.name)}
-        helperText={
-          field.name === "allergy_notes"
-            ? t("allergyNotesHelp")
-            : resource === "allergies" && field.name === "ingredient_keyword"
-              ? t("allergyKeywordHelp")
-              : undefined
-        }
+        helperText={help ? t(help) : undefined}
         autoComplete={field.name === "password" ? "new-password" : "off"}
         slotProps={{
           inputLabel: { shrink: true },
@@ -179,6 +216,13 @@ export default function ResourceForm({
                           {t("none")}
                         </MenuItem>,
                       ]),
+                  ...(unavailableBranch
+                    ? [
+                        <MenuItem key="inactive" value={form[field.name]} disabled>
+                          {t("inactiveBranch")}
+                        </MenuItem>,
+                      ]
+                    : []),
                   ...options.map((item) => (
                     <MenuItem key={item.id} value={item.id}>
                       {label(item)}
@@ -193,7 +237,7 @@ export default function ResourceForm({
     );
   }
   async function addAllergy(draft: Record<string, any>) {
-    const allergy: RecordData = await api("allergies/", "POST", draft);
+    const allergy: RecordData = await callApi("allergies/", "POST", draft);
     setAddedAllergies((current) => [...current, allergy]);
     setValues((current) => ({
       ...current,
@@ -210,6 +254,27 @@ export default function ResourceForm({
       if (resource === "prescriptions") result.lines = lines;
       if (resource === "dispense")
         result.prescription_line = result.prescription_line || null;
+      if (resource === "patients") {
+        if (patientRecord && result.preferred_branch === patientRecord.preferred_branch) {
+          delete result.preferred_branch;
+        } else {
+          result.preferred_branch = result.preferred_branch || null;
+        }
+      }
+      if (resource === "users") {
+        const patientPreferenceUnspecified =
+          result.role === "Patient" && (!values.patient || (!record?.patient && !result.branch));
+        if (record?.patient || result.role !== "Patient" || !result.patient) delete result.patient;
+        if (
+          result.role === "Admin" ||
+          patientPreferenceUnspecified ||
+          (record && result.branch === record.branch)
+        ) {
+          delete result.branch;
+        } else {
+          result.branch = result.branch || null;
+        }
+      }
       if (record && result.password === "") delete result.password;
       await onSave(result);
       onClose();
@@ -233,6 +298,7 @@ export default function ResourceForm({
             component: "form",
             onSubmit: (e: React.FormEvent) => {
               e.preventDefault();
+              if (busy || !ready) return;
               if (resource === "dispense") setConfirm(true);
               else void submit();
             },
@@ -244,31 +310,38 @@ export default function ResourceForm({
           <span className="dialog-subtitle">{t(resource)}</span>
         </DialogTitle>
         <DialogContent>
+          {activeBranch && (resource === "batches" || resource === "dispense") && (
+            <p><strong>{t("branch")}</strong> · {activeBranch.name} · {activeBranch.code}</p>
+          )}
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {t(error, { defaultValue: t("error") })}
             </Alert>
           )}
-          <div className="form-grid">
-            {schema.map((f) => {
-              const control = field(f, values, (key, value) =>
-                setValues({
-                  ...values,
-                  [key]: value,
-                  ...(key === "patient" ? { prescription_line: "" } : {}),
-                }),
-              );
-              if (resource !== "patients" || f.name !== "allergies") return control;
-              return (
-                <div key={f.name}>
-                  {control}
-                  <Button onClick={() => setAddingAllergy(true)} disabled={busy}>
-                    {t("addCatalogAllergy")}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
+          {!ready && !error && <p role="status">{t("loading")}</p>}
+          {ready && (
+            <div className="form-grid">
+              {fields.map((f) => {
+                const control = field(f, values, (key, value) => {
+                  const updated = { ...values, [key]: value };
+                  if (key === "patient" && resource === "dispense") updated.prescription_line = "";
+                  if (key === "role" && resource === "users") {
+                    updated.branch = value === "Pharmacist" ? (activeBranch?.id ?? "") : "";
+                  }
+                  setValues(updated);
+                });
+                if (resource !== "patients" || f.name !== "allergies") return control;
+                return (
+                  <div key={f.name}>
+                    {control}
+                    <Button onClick={() => setAddingAllergy(true)} disabled={busy}>
+                      {t("addCatalogAllergy")}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {resource === "prescriptions" && (
             <div className="prescription-editor">
               {lines.map((line, index) => (
@@ -318,7 +391,7 @@ export default function ResourceForm({
           <Button disabled={busy} onClick={onClose}>
             {t("cancel")}
           </Button>
-          <Button disabled={busy} variant="contained" type="submit">
+          <Button disabled={busy || !ready} variant="contained" type="submit">
             {t(busy ? "loading" : "save")}
           </Button>
         </DialogActions>
@@ -327,6 +400,7 @@ export default function ResourceForm({
         <ResourceForm
           resource="allergies"
           data={data}
+          callApi={callApi}
           onClose={() => setAddingAllergy(false)}
           onSave={addAllergy}
         />

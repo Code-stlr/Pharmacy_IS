@@ -15,6 +15,8 @@ React/TypeScript/Vite and Material UI provide the interface. Django REST Framewo
 - Keep a single domain app while the MVP is small. Split it when concrete ownership or complexity warrants it.
 - Use PostgreSQL row locks rather than application-only stock checks. Prescription-first locking serializes completion across lines.
 - Keep Django User and Groups. Patient links to User optionally. This preserves the already-migrated auth schema.
+- Use one PostgreSQL database and one patient record per person across the pharmacy network. Patient preferences only affect the portal. Pharmacist assignments and administrator branch selection determine which inventory is visible and writable.
+- Store the branch on each batch and derive a dispensing location from the batch. Prescription balances count all dispensing transactions across branches. The API records staff access to individual patient records and their focused clinical history, along with clinical writes, in the patient audit log.
 - Use session cookies and CSRF on the same origin. Never store passwords/session tokens in localStorage.
 - Keep batches, prescriptions and dispensing history immutable through this MVP API after creation. Correction and cancellation workflows need a separate reviewed design.
 - PostgreSQL and reviewed Django migrations are the application data source. Demo seeds use fictional records.
