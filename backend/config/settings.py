@@ -26,6 +26,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+# Login lockout: after LOGIN_MAX_ATTEMPTS wrong passwords for one username, login is blocked for LOGIN_LOCK_SECONDS.
+LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
+LOGIN_LOCK_SECONDS = int(os.environ.get("LOGIN_LOCK_SECONDS", "300"))
 SPECTACULAR_SETTINGS = {
     "TITLE": "Pharmacy IS API", "VERSION": "0.1.0",
     "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],

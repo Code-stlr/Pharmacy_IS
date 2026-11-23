@@ -1,4 +1,7 @@
+import time
 from uuid import uuid4
+from django.conf import settings
+from django.core.cache import cache
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
@@ -68,6 +71,16 @@ class BranchSelection(serializers.Serializer):
     branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.filter(is_active=True))
 
 
+def login_keys(username):
+    name = username.strip().lower()
+    return "login-fails:" + name, "login-lock:" + name
+
+
+def locked_response(seconds):
+    seconds = max(1, int(seconds))
+    return Response({"code": "login_locked", "retry_after": seconds}, status=429, headers={"Retry-After": str(seconds)})
+
+
 @method_decorator(csrf_protect, name="dispatch")
 @extend_schema(request=Credentials, responses=IdentitySerializer)
 class LoginView(APIView):
@@ -76,9 +89,26 @@ class LoginView(APIView):
     def post(self, request):
         data = Credentials(data=request.data)
         data.is_valid(raise_exception=True)
+        fails_key, lock_key = login_keys(data.validated_data["username"])
+        locked_until = cache.get(lock_key)
+        if locked_until:
+            # Blocked: do not even check the password, so the lock cannot be used to guess it.
+            return locked_response(locked_until - time.time())
         user = authenticate(request, **data.validated_data)
         if not user:
+            # Counted for unknown usernames too, so the response never reveals whether an account exists.
+            cache.add(fails_key, 0, settings.LOGIN_LOCK_SECONDS)
+            try:
+                fails = cache.incr(fails_key)
+            except ValueError:
+                cache.set(fails_key, 1, settings.LOGIN_LOCK_SECONDS)
+                fails = 1
+            if fails >= settings.LOGIN_MAX_ATTEMPTS:
+                cache.set(lock_key, time.time() + settings.LOGIN_LOCK_SECONDS, settings.LOGIN_LOCK_SECONDS)
+                cache.delete(fails_key)
+                return locked_response(settings.LOGIN_LOCK_SECONDS)
             return Response({"code": "invalid_credentials"}, status=400)
+        cache.delete(fails_key)
         login(request, user)
         return Response(identity(request, user))
 
