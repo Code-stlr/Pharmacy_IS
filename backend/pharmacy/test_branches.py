@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from io import StringIO
 
 from django.contrib.auth import get_user_model
@@ -97,6 +97,32 @@ class BranchTests(TestCase):
         self.assertTrue(PatientAccessLog.objects.filter(
             patient=self.patient, actor=self.east_staff, branch=self.east, action=PatientAccessLog.Action.READ,
         ).exists())
+
+    def test_patient_directory_filters_by_preferred_branch_without_changing_access(self):
+        east_patient = Patient.objects.create(
+            reference="FILTER-EAST", full_name="Branch Test Patient", date_of_birth=date(2000, 1, 1),
+            preferred_branch=self.east,
+        )
+        unassigned_patient = Patient.objects.create(
+            reference="FILTER-UNASSIGNED", full_name="Branch Test Patient", date_of_birth=date(2000, 1, 1),
+        )
+        self.client.force_authenticate(self.main_staff)
+
+        def listed_ids(**params):
+            response = self.client.get("/api/patients/", params)
+            self.assertEqual(response.status_code, 200)
+            return {record["id"] for record in response.json()}
+
+        self.assertEqual(listed_ids(), {self.patient.pk, east_patient.pk, unassigned_patient.pk})
+        self.assertEqual(listed_ids(preferred_branch=self.east.pk, search="Branch Test"), {east_patient.pk})
+        self.assertEqual(listed_ids(preferred_branch=self.east.pk, reference=self.patient.reference), set())
+        self.assertEqual(listed_ids(preferred_branch="unassigned"), {unassigned_patient.pk})
+        invalid = self.client.get("/api/patients/", {"preferred_branch": "9999999999999999999"})
+        self.assertEqual(invalid.status_code, 400)
+
+        self.client.force_authenticate(self.patient_user)
+        self.assertEqual(listed_ids(preferred_branch=self.east.pk), set())
+        self.assertEqual(listed_ids(preferred_branch=self.main.pk), {self.patient.pk})
 
     def test_stock_totals_lists_and_details_are_branch_local(self):
         self.client.force_authenticate(self.east_staff)

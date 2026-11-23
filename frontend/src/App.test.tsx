@@ -137,6 +137,38 @@ test("admin branch switches replace visible stock and pin requests to that branc
   }));
 });
 
+test("the patient directory combines search and preferred branch and can clear the filter", async () => {
+  const patients = [
+    { id: 1, full_name: "Main Patient", preferred_branch: 1 },
+    { id: 2, full_name: "North Patient", preferred_branch: 2 },
+  ];
+  const fetchApi = vi.fn(async (path: string) => {
+    if (path.endsWith("auth/me/"))
+      return response({ ...staffUser, role: "Pharmacist", active_branch: mainBranch });
+    if (path.endsWith("branches/")) return response([mainBranch, northBranch]);
+    if (path.startsWith("/api/patients/")) {
+      const branch = new URL(path, "http://localhost").searchParams.get("preferred_branch");
+      return response(branch ? patients.filter((patient) => String(patient.preferred_branch) === branch) : patients);
+    }
+    return response([]);
+  });
+  vi.stubGlobal("fetch", fetchApi);
+  render(<MemoryRouter initialEntries={["/patients"]}><App /></MemoryRouter>);
+  expect(await screen.findByText("Main Patient")).toBeInTheDocument();
+
+  fireEvent.change(screen.getByRole("textbox", { name: "Search" }), { target: { value: "Patient" } });
+  const branchFilter = screen.getByRole("combobox", { name: "Preferred branch" });
+  fireEvent.mouseDown(branchFilter);
+  fireEvent.click(screen.getByRole("option", { name: "North Branch" }));
+  await waitFor(() => expect(screen.queryByText("Main Patient")).not.toBeInTheDocument());
+  expect(screen.getByText("North Patient")).toBeInTheDocument();
+  expect(fetchApi).toHaveBeenCalledWith("/api/patients/?search=Patient&preferred_branch=2", expect.anything());
+
+  fireEvent.mouseDown(branchFilter);
+  fireEvent.click(screen.getByRole("option", { name: "All branches" }));
+  expect(await screen.findByText("Main Patient")).toBeInTheDocument();
+});
+
 test("patient detail loads shared allergies and dispensing from another branch", async () => {
   const patient = { id: 7, full_name: "Demo Patient", reference: "P-7", allergy_names: ["Aspirin"] };
   const fetchApi = vi.fn(async (url: string) => {

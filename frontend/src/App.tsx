@@ -48,6 +48,7 @@ export default function App() {
   const [data, setData] = useState<Record<string, RecordData[]>>({}),
     [rows, setRows] = useState<RecordData[]>([]),
     [search, setSearch] = useState(""),
+    [patientBranch, setPatientBranch] = useState("all"),
     [stockPatient, setStockPatient] = useState(""),
     [stockFilter, setStockFilter] = useState("");
   const [busy, setBusy] = useState(false),
@@ -93,6 +94,7 @@ export default function App() {
   useEffect(() => {
     setRows([]);
     setSearch("");
+    setPatientBranch("all");
     setStockFilter("");
     setMessage("");
     setForm((current) => current?.resource === page ? current : null);
@@ -125,6 +127,9 @@ export default function App() {
           page +
             "/?search=" +
             encodeURIComponent(search) +
+            (page === "patients" && staff && patientBranch !== "all"
+              ? "&preferred_branch=" + encodeURIComponent(patientBranch)
+              : "") +
             (page === "stock" && stockPatient ? "&patient=" + stockPatient : "") +
             (page === "stock" && stockFilter ? "&filter=" + stockFilter : ""),
         )
@@ -140,7 +145,7 @@ export default function App() {
       active = false;
       clearTimeout(timer);
     };
-  }, [user?.id, workspaceApi, sessionAction, page, search, stockPatient, stockFilter, revision]);
+  }, [user?.id, workspaceApi, sessionAction, page, search, staff, patientBranch, stockPatient, stockFilter, revision]);
   function showError(error: unknown) {
     setMessage(error instanceof ApiError ? error.code : "error");
   }
@@ -522,6 +527,24 @@ export default function App() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+              {page === "patients" && staff && (
+                <TextField
+                  size="small"
+                  select
+                  label={t("preferred_branch")}
+                  value={patientBranch}
+                  onChange={(e) => setPatientBranch(e.target.value)}
+                  sx={{ minWidth: 200 }}
+                >
+                  <MenuItem value="all">{t("allBranches")}</MenuItem>
+                  {branches.map((branch) => (
+                    <MenuItem key={branch.id} value={String(branch.id)}>
+                      {branch.name}
+                    </MenuItem>
+                  ))}
+                  <MenuItem value="unassigned">{t("noPreferredBranch")}</MenuItem>
+                </TextField>
+              )}
               {page === "stock" && (
                 <TextField
                   size="small"

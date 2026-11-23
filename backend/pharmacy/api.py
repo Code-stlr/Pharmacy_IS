@@ -39,18 +39,18 @@ def patient_subject(record):
     return None
 
 
-def patient_id_from(request):
-    supplied = request.query_params.get("patient")
+def query_id_from(request, parameter):
+    supplied = request.query_params.get(parameter)
     if supplied is None:
         return None
     if not supplied.isascii() or not supplied.isdecimal() or len(supplied) > 19 or not 0 < int(supplied) <= 2**63 - 1:
-        raise ValidationError({"code": "invalid_patient"})
+        raise ValidationError({"code": f"invalid_{parameter}"})
     return int(supplied)
 
 
 def audit_patient_query(request):
     if getattr(request, "operating_branch", None) and request.method == "GET":
-        patient_id = patient_id_from(request)
+        patient_id = query_id_from(request, "patient")
         if patient_id is not None:
             patient = Patient.objects.filter(pk=patient_id).first()
             if patient is not None:
@@ -118,7 +118,14 @@ class PatientViewSet(ResourceViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         reference = self.request.query_params.get("reference") if self.request else None
-        return qs.filter(reference=reference) if reference is not None else qs
+        if reference is not None:
+            qs = qs.filter(reference=reference)
+        if self.request is None or getattr(self, "action", None) != "list":
+            return qs
+        if self.request.query_params.get("preferred_branch") == "unassigned":
+            return qs.filter(preferred_branch__isnull=True)
+        branch_id = query_id_from(self.request, "preferred_branch")
+        return qs.filter(preferred_branch_id=branch_id) if branch_id is not None else qs
 
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
@@ -171,7 +178,7 @@ class BatchViewSet(ResourceViewSet):
 class PatientHistoryViewSet(ResourceViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
-        patient_id = patient_id_from(self.request) if self.request else None
+        patient_id = query_id_from(self.request, "patient") if self.request else None
         return qs.filter(patient_id=patient_id) if patient_id is not None else qs
 
     def list(self, request, *args, **kwargs):
@@ -250,7 +257,7 @@ class StockViewSet(ResourceViewSet):
         context = super().get_serializer_context()
         keywords = []
         if context["operating_branch"] is not None:
-            patient_id = patient_id_from(self.request)
+            patient_id = query_id_from(self.request, "patient")
             keywords = list(Allergy.objects.filter(patients__pk=patient_id).exclude(ingredient_keyword="").values_list("ingredient_keyword", flat=True)) if patient_id else []
         context["allergy_keywords"] = keywords
         return context
