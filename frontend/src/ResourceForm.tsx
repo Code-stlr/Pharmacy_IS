@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { api, ApiError, type Branch, type RecordData } from "./api";
 import { resources, type Field } from "./resources";
+import BranchSelect from "./BranchSelect";
 
 export default function ResourceForm({
   resource,
@@ -117,6 +118,7 @@ export default function ResourceForm({
     form: Record<string, any>,
     update: (key: string, value: any) => void,
   ) {
+    if (field.name === "preferred_branch") return <BranchSelect key={field.name} branches={(data.branches || []) as Branch[]} value={form[field.name] ?? ""} onChange={(value) => update(field.name, value)} disabled={busy || !ready} />;
     const related = data[field.relation || ""] || [];
     let options = field.relation === "lines" ? lineOptions : related;
     if (field.relation === "allergies") {
@@ -170,8 +172,9 @@ export default function ResourceForm({
           inputLabel: { shrink: true },
           select: field.multiple ? { multiple: true } : undefined,
           htmlInput: {
-            min: field.name === "stock_quantity" ? 0 : 1,
-            step: field.type === "decimal" ? "0.01" : undefined,
+            min: field.min ?? (field.name === "stock_quantity" ? 0 : 1),
+            max: field.max,
+            step: field.step ?? (field.type === "decimal" ? "0.01" : undefined),
           },
         }}
         onChange={(event) =>
@@ -260,6 +263,11 @@ export default function ResourceForm({
         } else {
           result.preferred_branch = result.preferred_branch || null;
         }
+      }
+      if (resource === "branchPreference") result.preferred_branch = result.preferred_branch || null;
+      if (resource === "branches") {
+        result.latitude = result.latitude === "" || result.latitude == null ? null : result.latitude;
+        result.longitude = result.longitude === "" || result.longitude == null ? null : result.longitude;
       }
       if (resource === "users") {
         const patientPreferenceUnspecified =

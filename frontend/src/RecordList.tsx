@@ -42,7 +42,7 @@ const columns: Record<string, string[]> = {
   suppliers: ["name", "phone"],
   doctors: ["full_name", "license_number"],
   users: ["username", "email", "role", "branch", "is_active"],
-  branches: ["name", "code", "is_active"],
+  branches: ["name", "code", "address", "is_active"],
 };
 export default function RecordList({
   resource,

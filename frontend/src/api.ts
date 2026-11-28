@@ -1,5 +1,6 @@
+import { neonHeaders } from "./neon";
 export type RecordData = { id: number; [key: string]: any };
-export type Branch = { id: number; code: string; name: string; is_active: boolean };
+export type Branch = { id: number; code: string; name: string; is_active: boolean; address?: string; latitude?: string | number | null; longitude?: string | number | null };
 export type User = {
   id: number;
   username: string;
@@ -28,6 +29,7 @@ export async function api(
   };
   if (branchId !== undefined) headers["X-Pharmacy-Branch"] = String(branchId);
   try {
+    Object.assign(headers, await neonHeaders());
     if (method !== "GET") {
       const res = await fetch("/api/auth/csrf/", {
         credentials: "same-origin",
@@ -48,7 +50,7 @@ export async function api(
           ? body.code
           : res.status === 429
             ? "rateLimited"
-            : res.status === 403
+            : res.status === 403 || res.status === 401
               ? "unauthorized"
               : "validation",
         Object.keys(body),

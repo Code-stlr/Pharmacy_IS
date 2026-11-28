@@ -55,15 +55,15 @@ Use a medication marked as not requiring a prescription for OTC dispensing; leav
 
 ## API
 
-API clients first GET `/api/auth/csrf/` and send the returned token as `X-CSRFToken` on unsafe requests, keeping the session and CSRF cookies. Login and registration enforce CSRF for anonymous clients too. Cookies stay on the same origin; Nginx preserves the original Host including the port. No JWT or local-storage credential storage is used.
+API clients first GET `/api/auth/csrf/` and send the returned token as `X-CSRFToken` on unsafe requests, keeping the application session and CSRF cookies. With Neon Auth enabled, the SDK manages sign-in/verification/recovery/logout and persistent cookies, and API requests also carry `Authorization: Bearer <JWT>` and `X-Neon-Session`. The backend verifies the token and live session against the same Neon branch. Credentials/tokens are not kept in localStorage. See [Neon setup](neon-auth.md) for all authentication flows and migration details. The legacy signup/login endpoints below return 410 in Neon mode and remain available only in local acceptance mode.
 
 | Endpoint | Operations |
 |---|---|
 | `/api/auth/login/`, `/api/auth/register/`, `/api/auth/logout/` | POST |
 | `/api/auth/me/` | GET, PATCH account name/email |
 | `/api/auth/branch/` | POST an active branch ID as `{"branch": id}` with an administrator session |
-| `/api/auth/patient/` | GET own linked record, PATCH own phone |
-| `/api/branches/` | Public GET active branch names and identifiers |
+| `/api/auth/patient/` | GET own linked record, PATCH own phone/preferred branch |
+| `/api/branches/` | Public GET active branch names, addresses, coordinates and identifiers |
 | `/api/admin/branches/` | Administrator GET, POST and PATCH |
 | `/api/patients/`, `/api/medications/`, `/api/categories/`, `/api/suppliers/`, `/api/doctors/` | GET, POST, PATCH detail |
 | `/api/batches/`, `/api/prescriptions/` | GET, POST; immutable through this API after creation |

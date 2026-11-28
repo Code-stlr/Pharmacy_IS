@@ -64,7 +64,8 @@ class ProfileSerializer(serializers.Serializer):
 
 
 class PhoneSerializer(serializers.Serializer):
-    phone = serializers.CharField(max_length=32, allow_blank=True)
+    phone = serializers.CharField(max_length=32, allow_blank=True, required=False)
+    preferred_branch = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.filter(is_active=True), required=False, allow_null=True)
 
 
 class BranchSelection(serializers.Serializer):
@@ -87,6 +88,8 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
     def post(self, request):
+        if settings.NEON_AUTH_URL:
+            return Response({"code": "use_neon_auth"}, status=410)
         data = Credentials(data=request.data)
         data.is_valid(raise_exception=True)
         fails_key, lock_key = login_keys(data.validated_data["username"])
@@ -119,6 +122,8 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
     def post(self, request):
+        if settings.NEON_AUTH_URL:
+            return Response({"code": "use_neon_auth"}, status=410)
         data = Registration(data=request.data)
         data.is_valid(raise_exception=True)
         values = data.validated_data
@@ -167,6 +172,8 @@ class MeView(APIView):
     def get(self, request):
         return Response(identity(request, request.user))
     def patch(self, request):
+        if settings.NEON_AUTH_URL and "email" in request.data and request.data["email"] != request.user.email:
+            return Response({"code": "email_managed_by_neon"}, status=400)
         data = ProfileSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         for key, value in data.validated_data.items():
@@ -185,7 +192,7 @@ class MyPatientView(APIView):
         if not patient:
             return Response({"code": "not_found"}, status=404)
         # Patient users cannot alter identity, ownership or clinician-entered allergy notes.
-        if set(request.data) - {"phone"}:
+        if set(request.data) - {"phone", "preferred_branch"}:
             return Response({"code": "forbidden_fields"}, status=400)
         serializer = PatientSerializer(patient, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)

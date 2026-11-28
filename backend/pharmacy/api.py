@@ -29,6 +29,7 @@ class BranchListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Branch.objects.filter(is_active=True).order_by("name", "pk")
     serializer_class = BranchSerializer
     permission_classes = [AllowAny]
+    authentication_classes = []
 
 
 def patient_subject(record):

@@ -5,6 +5,9 @@ export type Field = {
   optional?: boolean;
   multiple?: boolean;
   options?: string[];
+  min?: number;
+  max?: number;
+  step?: string;
 };
 export const resources: Record<string, Field[]> = {
   users: [
@@ -18,7 +21,13 @@ export const resources: Record<string, Field[]> = {
     { name: "is_active", type: "boolean" },
     { name: "password", type: "password" },
   ],
-  branches: [{ name: "name" }, { name: "code" }, { name: "is_active", type: "boolean" }],
+  branches: [
+    { name: "name" }, { name: "code" }, { name: "address", optional: true },
+    { name: "latitude", type: "decimal", optional: true, min: -90, max: 90, step: "0.000001" },
+    { name: "longitude", type: "decimal", optional: true, min: -180, max: 180, step: "0.000001" },
+    { name: "is_active", type: "boolean" },
+  ],
+  branchPreference: [{ name: "preferred_branch", relation: "branches", optional: true }],
   patients: [
     { name: "reference" },
     { name: "full_name" },

@@ -4,16 +4,17 @@ test("patient registration, profile update, isolation and all three languages", 
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Create patient account" }).click();
+  await page.getByRole("button", { name: "Create account" }).click();
   await page.getByLabel("Username", { exact: false }).fill("e2e_" + Date.now());
   await page
-    .getByLabel("Password", { exact: false })
+    .getByLabel("Password", { exact: true })
     .fill("Browser-Patient-5829!");
+  await page.getByLabel("Confirm password", { exact: true }).fill("Browser-Patient-5829!");
   await page
     .getByLabel("Full name", { exact: false })
     .fill("Browser Demo Patient");
   await page.getByLabel("Birth date", { exact: false }).fill("2000-01-01");
-  await page.getByRole("button", { name: "Create patient account" }).click();
+  await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Inventory batches" }),

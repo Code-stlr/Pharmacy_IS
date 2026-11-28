@@ -12,6 +12,10 @@ import AdminPanel from "./AdminPanel";
 import Icon from "./Icon";
 import "./styles.css";
 import Metasearch from "./Metasearch";
+import NeonAuthPage from "./NeonAuthPage";
+import { authConfiguration, signOutNeon } from "./neon";
+import BranchSelect from "./BranchSelect";
+import ChangePassword from "./ChangePassword";
 
 const endpoints = [
   "patients",
@@ -38,6 +42,9 @@ export default function App() {
     location = useLocation(),
     navigate = useNavigate();
   const page = location.pathname.split("/")[1] || "overview";
+  const [neonEnabled, setNeonEnabled] = useState<boolean | null>(null);
+  const [registrationBranch, setRegistrationBranch] = useState<number | "">("");
+  const [changingPassword, setChangingPassword] = useState(false);
   const [user, setUser] = useState<User | null>(null),
     [checking, setChecking] = useState(true),
     [registering, setRegistering] = useState(false),
@@ -52,6 +59,7 @@ export default function App() {
     [stockPatient, setStockPatient] = useState(""),
     [stockFilter, setStockFilter] = useState("");
   const [busy, setBusy] = useState(false),
+    [listBusy, setListBusy] = useState(true),
     [message, setMessage] = useState(""),
     [revision, setRevision] = useState(0);
   const [form, setForm] = useState<{
@@ -72,13 +80,30 @@ export default function App() {
     document.title = t("title") + " — " + t(page);
   }, [i18n.language, page, t]);
   useEffect(() => {
-    api("auth/me/")
+    authConfiguration().then((config) => {
+      setNeonEnabled(Boolean(config.neonAuthUrl));
+      return api("auth/me/");
+    })
       .then(setUser)
       .catch(() => {})
       .finally(() => setChecking(false));
   }, []);
   useEffect(() => {
-    if (!staff && !registering) return;
+    if (!neonEnabled || !user) return;
+    let active = true;
+    const restore = () => {
+      const version = sessionVersion.current;
+      void api("auth/me/").then((updated) => {
+        if (active && version === sessionVersion.current) updateIdentity(updated);
+      }).catch((error) => {
+        if (active && version === sessionVersion.current) showError(error);
+      });
+    };
+    window.addEventListener("focus", restore);
+    return () => { active = false; window.removeEventListener("focus", restore); };
+  }, [neonEnabled, user?.id, user?.role, branchId]);
+  useEffect(() => {
+    if (!user && !registering) return;
     let active = true;
     api("branches/")
       .then((value) => {
@@ -90,7 +115,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [staff, registering]);
+  }, [user?.id, registering]);
   useEffect(() => {
     setRows([]);
     setSearch("");
@@ -121,6 +146,7 @@ export default function App() {
   useEffect(() => {
     if (!user || sessionAction || !endpoints.includes(page)) return;
     let active = true;
+    setListBusy(true);
     const timer = setTimeout(
       () =>
         workspaceApi(
@@ -138,6 +164,8 @@ export default function App() {
           })
           .catch((e) => {
             if (active) showError(e);
+          }).finally(() => {
+            if (active) setListBusy(false);
           }),
       200,
     );
@@ -147,6 +175,11 @@ export default function App() {
     };
   }, [user?.id, workspaceApi, sessionAction, page, search, staff, patientBranch, stockPatient, stockFilter, revision]);
   function showError(error: unknown) {
+    if (neonEnabled && error instanceof ApiError && error.code === "unauthorized") {
+      sessionVersion.current += 1;
+      clearWorkspace();
+      setUser(null);
+    }
     setMessage(error instanceof ApiError ? error.code : "error");
   }
   async function authenticate(event: React.FormEvent<HTMLFormElement>) {
@@ -154,6 +187,12 @@ export default function App() {
     setAuthenticating(true);
     setMessage("");
     const payload: Record<string, FormDataEntryValue | null> = Object.fromEntries(new FormData(event.currentTarget));
+    if (registering && payload.password !== payload.confirm_password) {
+      setMessage("passwordMismatch");
+      setAuthenticating(false);
+      return;
+    }
+    delete payload.confirm_password;
     if (registering && payload.preferred_branch === "") payload.preferred_branch = null;
     try {
       setUser(
@@ -177,6 +216,7 @@ export default function App() {
     setSessionAction("logout");
     try {
       await api("auth/logout/", "POST");
+      await signOutNeon();
       clearWorkspace();
       setUser(null);
       setMessage("");
@@ -188,6 +228,7 @@ export default function App() {
     }
   }
   function clearWorkspace() {
+    setChangingPassword(false);
     setData({});
     setRows([]);
     setForm(null);
@@ -239,16 +280,21 @@ export default function App() {
     const resource = form.resource,
       record = form.record;
     const updated = await workspaceApi(
-      resource === "profile"
+      resource === "branchPreference" ? "auth/patient/" : resource === "profile"
         ? "auth/me/"
         : (resource === "dispense" ? "dispensings" : resource) +
             "/" +
             (record ? record.id + "/" : ""),
-      resource === "profile" || record ? "PATCH" : "POST",
+      resource === "profile" || resource === "branchPreference" || record ? "PATCH" : "POST",
       values,
     );
     if (currentVersion !== sessionVersion.current) return;
     if (resource === "profile") updateIdentity(updated);
+    if (resource === "branchPreference") {
+      const updatedIdentity = await api("auth/me/");
+      if (currentVersion !== sessionVersion.current) return;
+      updateIdentity(updatedIdentity);
+    }
     setRevision((x) => x + 1);
     setMessage("saved");
   }
@@ -259,6 +305,10 @@ export default function App() {
         <p role="status">{t("loading")}</p>
       </div>
     );
+  if (neonEnabled === null)
+    return <div className="startup"><Brand /><Alert severity="error">{t("offline")}</Alert><Button onClick={() => window.location.reload()}>{t("refresh")}</Button></div>;
+  if (!user && neonEnabled)
+    return <NeonAuthPage onAuthenticated={(value) => { setUser(value); navigate("/"); setRevision((x) => x + 1); }} />;
   if (!user)
     return (
       <div className="auth-page">
@@ -320,6 +370,7 @@ export default function App() {
             />
             {registering && (
               <>
+                <TextField fullWidth label={t("confirmPassword")} name="confirm_password" type="password" autoComplete="new-password" required />
                 <TextField
                   fullWidth
                   label={t("full_name")}
@@ -334,28 +385,13 @@ export default function App() {
                   required
                   slotProps={{ inputLabel: { shrink: true } }}
                 />
-                {branches.length > 0 && (
-                  <TextField
-                    fullWidth
-                    select
-                    label={t("preferred_branch")}
-                    name="preferred_branch"
-                    defaultValue=""
-                    helperText={t("preferredBranchHelp")}
-                  >
-                    <MenuItem value="">{t("none")}</MenuItem>
-                    {branches.map((branch) => (
-                      <MenuItem key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
+                {branches.length > 0 && <BranchSelect branches={branches} value={registrationBranch} onChange={setRegistrationBranch} disabled={authenticating} />}
               </>
             )}
             <Button
               fullWidth
-              variant="contained"
+              variant={registering ? "contained" : "outlined"}
+              className="auth-submit"
               type="submit"
               disabled={authenticating}
               endIcon={<Icon name="arrow" />}
@@ -456,6 +492,8 @@ export default function App() {
           >
             {t("edit")}
           </Button>
+          {user.role === "Patient" && <Button sx={{ ml: 2 }} variant="outlined" onClick={() => setForm({ resource: "branchPreference", record: { id: user.id, preferred_branch: user.active_branch?.id ?? "" } })}>{t("branchPreference")}</Button>}
+          {neonEnabled && staff && <Button sx={{ ml: 2 }} variant="outlined" onClick={() => setChangingPassword(true)}>{t("changePassword")}</Button>}
         </section>
       </>
     ) : page === "dispense" ? (
@@ -505,7 +543,7 @@ export default function App() {
             <div>
               <h2>{t("allRecords")}</h2>
               <span className="record-count">
-                {rows.length} {t("records")}
+                {listBusy ? t("loading") : `${rows.length} ${t("records")}`}
               </span>
               {page === "stock" && (
                 <span className="record-count">
@@ -582,7 +620,7 @@ export default function App() {
               </Button>
             </div>
           </div>
-          {busy ? (
+          {busy || listBusy ? (
             <div className="loading-state" role="status">
               {t("loading")}
             </div>
@@ -619,7 +657,7 @@ export default function App() {
       {message && (
         <Alert
           sx={{ mb: 3 }}
-          severity={message === "saved" ? "success" : "error"}
+          severity={message === "saved" || message === "passwordChanged" ? "success" : "error"}
         >
           {t(message, { defaultValue: t("error") })}
         </Alert>
@@ -646,6 +684,7 @@ export default function App() {
           onClose={() => setPatientHistory(null)}
         />
       )}
+      {changingPassword && neonEnabled && staff && <ChangePassword onClose={() => setChangingPassword(false)} onChanged={() => setMessage("passwordChanged")} />}
     </Workspace>
   );
 }

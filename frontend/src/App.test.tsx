@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import * as neon from "./neon";
 import "./i18n";
 import i18n from "./i18n";
 import App from "./App";
@@ -9,6 +10,7 @@ import { messages } from "./locales";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   void i18n.changeLanguage("en");
 });
 function loggedOut() {
@@ -47,10 +49,11 @@ test("registration shows required patient fields", async () => {
   loggedOut();
   render(<RoutedApp />);
   fireEvent.click(
-    await screen.findByRole("button", { name: "Create patient account" }),
+    await screen.findByRole("button", { name: "Create account" }),
   );
   expect(screen.getByLabelText(/Full name/)).toBeRequired();
   expect(screen.getByLabelText(/Birth date/)).toBeRequired();
+  expect(screen.getByLabelText(/Confirm password/)).toBeRequired();
 });
 test("patient navigation excludes inventory and dispensing actions", async () => {
   vi.stubGlobal(
@@ -137,6 +140,53 @@ test("admin branch switches replace visible stock and pin requests to that branc
   }));
 });
 
+test("restoring a Neon session after switching branches preserves loaded categories", async () => {
+  vi.spyOn(neon, "authConfiguration").mockResolvedValueOnce({ neonAuthUrl: "https://auth.example.test" });
+  let activeBranch = mainBranch;
+  const fetchApi = vi.fn(async (url: string) => {
+    if (url.endsWith("auth/me/"))
+      return response({ ...staffUser, role: "Admin", active_branch: activeBranch });
+    if (url.endsWith("auth/branch/")) {
+      activeBranch = northBranch;
+      return response({ ...staffUser, role: "Admin", active_branch: activeBranch });
+    }
+    if (url.endsWith("auth/csrf/")) return response({ csrfToken: "test" });
+    if (url.endsWith("branches/")) return response([mainBranch, northBranch]);
+    if (url.startsWith("/api/categories/")) return response([{ id: 1, name: "Antibiotics" }]);
+    return response([]);
+  });
+  vi.stubGlobal("fetch", fetchApi);
+  render(<MemoryRouter initialEntries={["/categories"]}><App /></MemoryRouter>);
+  expect(await screen.findByText("Antibiotics")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Switch branch.*Main Branch/ }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "North Branch · NORTH" }));
+  expect(await screen.findByText("Antibiotics")).toBeInTheDocument();
+  await act(async () => {
+    fireEvent.focus(window);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  });
+  expect(screen.getByText("Antibiotics")).toBeInTheDocument();
+});
+
+test("pending category requests show loading rather than an empty database", async () => {
+  let finish!: (value: ReturnType<typeof response>) => void;
+  const pending = new Promise<ReturnType<typeof response>>((resolve) => { finish = resolve; });
+  const fetchApi = vi.fn(async (url: string) => {
+    if (url.endsWith("auth/me/"))
+      return response({ ...staffUser, role: "Admin", active_branch: mainBranch });
+    if (url.includes("categories/?")) return pending;
+    return response([]);
+  });
+  vi.stubGlobal("fetch", fetchApi);
+  render(<MemoryRouter initialEntries={["/categories"]}><App /></MemoryRouter>);
+  await waitFor(() => expect(fetchApi).toHaveBeenCalledWith("/api/categories/?search=", expect.anything()));
+  expect(screen.getByRole("status")).toHaveTextContent(/Loading/);
+  expect(screen.queryByText("No records found")).not.toBeInTheDocument();
+  expect(screen.queryByText("0 records")).not.toBeInTheDocument();
+  await act(async () => { finish(response([{ id: 1, name: "Antibiotics" }])); });
+  expect(await screen.findByText("Antibiotics")).toBeInTheDocument();
+});
+
 test("the patient directory combines search and preferred branch and can clear the filter", async () => {
   const patients = [
     { id: 1, full_name: "Main Patient", preferred_branch: 1 },
@@ -161,7 +211,7 @@ test("the patient directory combines search and preferred branch and can clear t
   fireEvent.mouseDown(branchFilter);
   fireEvent.click(screen.getByRole("option", { name: "North Branch" }));
   await waitFor(() => expect(screen.queryByText("Main Patient")).not.toBeInTheDocument());
-  expect(screen.getByText("North Patient")).toBeInTheDocument();
+  expect(await screen.findByText("North Patient")).toBeInTheDocument();
   expect(fetchApi).toHaveBeenCalledWith("/api/patients/?search=Patient&preferred_branch=2", expect.anything());
 
   fireEvent.mouseDown(branchFilter);

@@ -2,6 +2,7 @@ from django.db import connection, DatabaseError
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from pharmacy import api, auth, admin_api
+from pharmacy.neon_account_views import CompleteAccountView, LinkAccountView
 from search_engine.views import metasearch
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -23,6 +24,14 @@ def health(request):
     return Response({"status": "ok"})
 
 
+@extend_schema(responses=dict, auth=[])
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def auth_config(request):
+    from django.conf import settings
+    return Response({"neonAuthUrl": settings.NEON_AUTH_URL})
+
+
 router = DefaultRouter()
 for prefix, view in [("patients", api.PatientViewSet), ("allergies", api.AllergyViewSet), ("categories", api.CategoryViewSet), ("suppliers", api.SupplierViewSet), ("doctors", api.DoctorViewSet), ("medications", api.MedicationViewSet), ("batches", api.BatchViewSet), ("prescriptions", api.PrescriptionViewSet), ("dispensings", api.DispensingViewSet)]:
     router.register(prefix, view)
@@ -34,8 +43,11 @@ for prefix, view in [('users', admin_api.AdminUserViewSet), ('branches', admin_a
 
 urlpatterns = [
     path("api/auth/csrf/", auth.csrf),
+    path("api/auth/config/", auth_config),
     path("api/auth/login/", auth.LoginView.as_view()),
     path("api/auth/register/", auth.RegisterView.as_view()),
+    path("api/auth/complete/", CompleteAccountView.as_view()),
+    path("api/auth/link-legacy/", LinkAccountView.as_view()),
     path("api/auth/logout/", auth.LogoutView.as_view()),
     path("api/auth/me/", auth.MeView.as_view()),
     path("api/auth/branch/", auth.ActiveBranchView.as_view()),

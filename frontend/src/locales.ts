@@ -1,10 +1,12 @@
 import { workspaceMessages } from "./workspace-locales";
+import { authMessages } from "./auth-locales";
+import { branchMessages } from "./branch-locales";
 const baseMessages = {
   en: {
     title: "Pharmacy IS",
     language: "Language",
     login: "Sign in",
-    register: "Create patient account",
+    register: "Create account",
     logout: "Sign out",
     username: "Username",
     password: "Password",
@@ -161,7 +163,7 @@ const baseMessages = {
     title: "Pharmacy IS",
     language: "Язык",
     login: "Войти",
-    register: "Регистрация пациента",
+    register: "Создать аккаунт",
     logout: "Выйти",
     username: "Имя пользователя",
     password: "Пароль",
@@ -316,7 +318,7 @@ const baseMessages = {
     title: "Pharmacy IS",
     language: "Тіл",
     login: "Кіру",
-    register: "Пациентті тіркеу",
+    register: "Аккаунт жасау",
     logout: "Шығу",
     username: "Пайдаланушы аты",
     password: "Құпиясөз",
@@ -472,7 +474,7 @@ const baseMessages = {
   },
 };
 export const messages = {
-  en: { ...baseMessages.en, ...workspaceMessages.en },
-  ru: { ...baseMessages.ru, ...workspaceMessages.ru },
-  kk: { ...baseMessages.kk, ...workspaceMessages.kk },
+  en: { ...baseMessages.en, ...workspaceMessages.en, ...authMessages.en, ...branchMessages.en },
+  ru: { ...baseMessages.ru, ...workspaceMessages.ru, ...authMessages.ru, ...branchMessages.ru },
+  kk: { ...baseMessages.kk, ...workspaceMessages.kk, ...authMessages.kk, ...branchMessages.kk },
 };

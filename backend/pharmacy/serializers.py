@@ -22,7 +22,7 @@ class ValidatedModelSerializer(serializers.ModelSerializer):
 class BranchSerializer(ValidatedModelSerializer):
     class Meta:
         model = Branch
-        fields = ["id", "code", "name", "is_active"]
+        fields = ["id", "code", "name", "is_active", "address", "latitude", "longitude"]
 
     def validate_code(self, value):
         if self.instance and self.instance.code == MAIN_BRANCH_CODE and value != MAIN_BRANCH_CODE:

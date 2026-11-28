@@ -17,7 +17,7 @@ React/TypeScript/Vite and Material UI provide the interface. Django REST Framewo
 - Keep Django User and Groups. Patient links to User optionally. This preserves the already-migrated auth schema.
 - Use one PostgreSQL database and one patient record per person across the pharmacy network. Patient preferences only affect the portal. Pharmacist assignments and administrator branch selection determine which inventory is visible and writable.
 - Store the branch on each batch and derive a dispensing location from the batch. Prescription balances count all dispensing transactions across branches. The API records staff access to individual patient records and their focused clinical history, along with clinical writes, in the patient audit log.
-- Use session cookies and CSRF on the same origin. Never store passwords/session tokens in localStorage.
+- Use managed Neon Better Auth for credentials, verification, OAuth and persistent session cookies. The React SDK attaches its JWT and session ID to Django API calls; Django verifies the signature and live managed session before applying local roles. Keep same-origin CSRF and the Django session for branch selection. Never store credentials/tokens in localStorage. See [Neon setup](neon-auth.md) for account linking and the legacy acceptance-test mode.
 - Keep batches, prescriptions and dispensing history immutable through this MVP API after creation. Correction and cancellation workflows need a separate reviewed design.
 - PostgreSQL and reviewed Django migrations are the application data source. Demo seeds use fictional records.
 

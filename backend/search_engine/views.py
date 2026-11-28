@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from search_engine.providers import (
     search_google,
@@ -10,6 +11,7 @@ from search_engine.providers import (
     search_providers
 )
 
+@extend_schema(parameters=[OpenApiParameter("q", str, required=True)], responses={200: dict, 400: dict})
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def metasearch(request):

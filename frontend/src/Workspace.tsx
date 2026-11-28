@@ -206,7 +206,7 @@ export default function Workspace({
           <footer className="workspace-footer">
             <span>Pharmacy IS</span>
             <span>
-              {user.username} · {t(user.role || "unauthorized")}
+              {user.first_name || user.username} · {t(user.role || "unauthorized")}
             </span>
           </footer>
         </main>

@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -51,6 +52,11 @@ class AdminUserSerializer(serializers.ModelSerializer):
         return result
 
     def validate(self, attrs):
+        if settings.NEON_AUTH_URL and self.instance and hasattr(self.instance, "neon_identity"):
+            if 'password' in attrs:
+                raise ValidationError({'code': 'password_managed_by_neon'})
+            if 'email' in attrs and attrs['email'] != self.instance.email:
+                raise ValidationError({'code': 'email_managed_by_neon'})
         if not self.instance and not attrs.get('password'):
             raise ValidationError({'code': 'password_required'})
         if 'password' in attrs:
@@ -203,7 +209,7 @@ class AdminBranchViewSet(ResourceViewSet):
     queryset = Branch.objects.all().order_by('name', 'pk')
     serializer_class = BranchSerializer
     permission_classes = [AdminOnly]
-    search_fields = ['name', 'code']
+    search_fields = ['name', 'code', 'address']
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):

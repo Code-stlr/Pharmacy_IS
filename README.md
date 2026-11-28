@@ -6,8 +6,9 @@ This is a university MVP using fictional data. It is not intended for real clini
 
 ## Features
 
-- Session-based authentication with Admin, Pharmacist and Patient roles.
+- Neon Better Auth: verified email sign-up, email/password and Google sign-in, password recovery, logout and persistent sessions. Django retains Admin, Pharmacist and Patient roles.
 - Multiple branch locations with independent inventory, shared patient records and cross-branch prescription fills.
+- Configurable branch addresses and coordinates, with permission-based nearest-branch selection during signup and from the patient profile.
 - Patient registration, profiles, prescriptions and dispensing history.
 - Medication catalog, categories, suppliers, doctors and inventory batches.
 - Prescription and OTC dispensing with validation and atomic stock updates.
@@ -61,6 +62,14 @@ $env:DEMO_PASSWORD='replace-with-your-demo-password'
 
 The script builds a separate acceptance stack on port 8181 and runs backend, frontend, schema and browser checks without resetting the main database. Use the acceptance accounts' existing password on later runs. See the [application guide](docs/application.md) for individual test commands and development setup.
 
+## Neon database and authentication
+
+The local `.env` selects the migrated Neon database and managed Better Auth. Configuration and the verified migration record are documented in [Neon setup](docs/neon-auth.md). Existing pharmacy accounts link to a verified Neon identity using their old username/password; this preserves their role and records. New sign-ups receive Patient access only.
+
+The [public demo staff accounts](DEMO_ACCOUNTS.md) provide one administrator and two pharmacists per branch with direct login IDs. They are already assigned roles/branches and do not require personal email or account linking. Staff can change their password from **My profile** without email.
+
+Neon sends verification and reset codes through its shared development email provider. Google uses shared development keys until your own OAuth app is configured. Keep credentials in `.env`, never in source. The original local database and pre-migration backups remain available privately.
+
 ## Documentation
 
 | Document | Contents |
@@ -68,6 +77,7 @@ The script builds a separate acceptance stack on port 8181 and runs backend, fro
 | [Application guide](docs/application.md) | Roles, workflows, API, localization and development |
 | [Architecture](docs/architecture.md) | Components, security boundaries and technical decisions |
 | [Database](docs/database.md) | PostgreSQL entities, constraints, migrations and stock rules |
+| [Branch locations](docs/branch-locations.md) | Verified Almaty addresses, nearest-branch selection and location privacy |
 | [ER diagram](docs/diagrams/domain-erd.md) | Schema relationships and diagram export instructions |
 | [Task register](docs/task-register.md) | Current tasks, owners, deadlines, status and completion evidence |
 | [Weekly progress](docs/progress/current-status.md) | Current team report and preserved weekly history |

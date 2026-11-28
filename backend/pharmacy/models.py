@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import Q, F
 from django.utils import timezone
@@ -8,10 +9,36 @@ from django.utils import timezone
 MAIN_BRANCH_CODE = "MAIN"
 
 
+class NeonIdentity(models.Model):
+    """Neon owns credentials; Django keeps domain ownership and authorization."""
+    subject = models.CharField(max_length=255, unique=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="neon_identity")
+
+
+class AuthRateLimit(models.Model):
+    key = models.CharField(max_length=64, unique=True)
+    attempts = models.PositiveIntegerField(default=0)
+    expires_at = models.FloatField(default=0)
+
+
 class Branch(models.Model):
     code = models.SlugField(max_length=32, unique=True)
     name = models.CharField(max_length=120)
     is_active = models.BooleanField(default=True)
+    address = models.CharField(max_length=300, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)])
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, validators=[MinValueValidator(-180), MaxValueValidator(180)])
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=(Q(latitude__isnull=True, longitude__isnull=True) | Q(latitude__isnull=False, longitude__isnull=False, latitude__gte=-90, latitude__lte=90, longitude__gte=-180, longitude__lte=180)), name="branch_valid_coordinates"),
+        ]
+
+    def clean(self):
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValidationError({"latitude": "Set both latitude and longitude, or leave both empty.", "longitude": "Set both latitude and longitude, or leave both empty."})
+        if self.latitude is not None and not self.address.strip():
+            raise ValidationError({"address": "An address is required when branch coordinates are configured."})
 
     def __str__(self):
         return f"{self.code} — {self.name}"

@@ -1066,6 +1066,58 @@ h3 {
   min-height: 48px;
   justify-content: space-between;
 }
+.auth-form .auth-submit {
+  min-height: 48px;
+  justify-content: center;
+  border: 1.5px solid var(--forest);
+  font-size: 14px;
+}
+.auth-form .auth-google {
+  min-height: 44px;
+  background: #fff;
+  border-color: #747775;
+  color: #1f1f1f;
+  font-size: 14px;
+  gap: 2px;
+}
+.auth-google img {
+  display: block;
+  flex-shrink: 0;
+}
+.auth-account-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.auth-account-prompt .MuiButton-root {
+  min-width: 0;
+  padding-inline: 4px;
+  font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.auth-staff-help {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.auth-staff-help summary {
+  cursor: pointer;
+  color: var(--forest);
+  min-height: 44px;
+  align-content: center;
+}
+.auth-staff-help summary:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 4px;
+}
+.auth-staff-help p { margin: 4px 0 0; }
 .auth-switch {
   text-align: center;
   padding-top: 8px;

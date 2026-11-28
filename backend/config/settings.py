@@ -13,16 +13,22 @@ TEMPLATES = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "APP
 WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {"default": {
     "ENGINE": "django.db.backends.postgresql",
-    "NAME": os.environ.get("POSTGRES_DB", "pharmacy"),
-    "USER": os.environ.get("POSTGRES_USER", "pharmacy"),
-    "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
-    "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-    "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+    "NAME": os.environ.get("PGDATABASE", os.environ.get("POSTGRES_DB", "pharmacy")),
+    "USER": os.environ.get("PGUSER", os.environ.get("POSTGRES_USER", "pharmacy")),
+    "PASSWORD": os.environ.get("PGPASSWORD", os.environ.get("POSTGRES_PASSWORD", "")),
+    "HOST": os.environ.get("PGHOST", os.environ.get("POSTGRES_HOST", "localhost")),
+    "PORT": os.environ.get("PGPORT", os.environ.get("POSTGRES_PORT", "5432")),
+    "CONN_HEALTH_CHECKS": True,
+    "OPTIONS": {key: os.environ[env] for key, env in (("sslmode", "PGSSLMODE"), ("channel_binding", "PGCHANNELBINDING")) if os.environ.get(env)},
 }}
+NEON_AUTH_URL = os.environ.get("NEON_AUTH_URL", "").rstrip("/")
+NEON_AUTH_ISSUER = os.environ.get("NEON_AUTH_ISSUER", "")
+NEON_AUTH_AUDIENCE = os.environ.get("NEON_AUTH_AUDIENCE", NEON_AUTH_ISSUER)
+NEON_AUTH_JWKS_URL = NEON_AUTH_URL + "/.well-known/jwks.json" if NEON_AUTH_URL else ""
 REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {"anon": os.environ.get('AUTH_ANON_RATE', '10/min')},
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["pharmacy.neon_auth.NeonAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
